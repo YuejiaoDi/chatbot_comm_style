@@ -8,17 +8,35 @@ dotenv.config();
 const dialogues = require("./4_types_bots");
 
 const app = express();
-app.use(cors({
-  origin: function (origin, callback) {
-    // allow curl/postman or same-origin
-    if (!origin) return callback(null, true);
-    // allow Qualtrics
-    if (origin.includes("qualtrics.com")) return callback(null, true);
-    // allow local dev
-    if (origin.startsWith("http://localhost")) return callback(null, true);
-    return callback(new Error("Not allowed by CORS: " + origin));
-  }
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // allow curl/postman or same-origin
+      if (!origin) return callback(null, true);
+
+      // allow Qualtrics (包含 preview )
+      if (
+        origin.includes("qualtrics.com") ||
+        origin.includes("qualtricsusercontent.com")
+      ) {
+        return callback(null, true);
+      }
+
+      // allow Netlify (我的前端网站)
+      if (origin === "https://chatbotexp.netlify.app") {
+        return callback(null, true);
+      }
+
+      // allow local dev
+      if (origin.startsWith("http://localhost")) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS: " + origin));
+    },
+  })
+);
+
 app.use(bodyParser.json());
 
 // =====================
