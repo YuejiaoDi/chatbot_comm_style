@@ -68,13 +68,17 @@ const CONDITION_POOL = [
 ];
 
 function getSessionId(req) {
-  // allow sessionId from body or query (useful for Qualtrics)
   const b = req.body || {};
-  return String(b.sessionId || req.query.sessionId || "test");
-}
 
-function normalize(text) {
-  return String(text || "").toLowerCase().trim().replace(/\s+/g, " ");
+  const sid =
+    b.sessionId ||
+    b.responseId ||
+    req.query.sessionId ||
+    req.query.responseId;
+
+  console.log("Resolved sessionId:", sid);
+
+  return String(sid || "");
 }
 
 // =====================
