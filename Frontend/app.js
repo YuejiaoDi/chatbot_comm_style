@@ -12,8 +12,16 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// 先写死，之后可以换成自动生成 / Qualtrics 传
-let sessionId = "ui_" + crypto.randomUUID();
+// ====== sessionId: 用 Qualtrics 的 ResponseID ======
+const params = new URLSearchParams(window.location.search);
+const responseIdFromUrl = params.get("responseId");
+
+let sessionId =
+  responseIdFromUrl && responseIdFromUrl.trim()
+    ? responseIdFromUrl.trim() // ✅ Qualtrics ResponseID
+    : "ui_" + crypto.randomUUID(); // fallback（本地测试用）
+// =========================================
+
 let conditionId = "collaborative_noES";
 const DEBUG = false; // 想隐藏就改成 false
 
