@@ -1,0 +1,113 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #e7eef2;
+}
+
+.app {
+  max-width: 600px;
+  margin: 40px auto;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+h1 {
+  text-align: center;
+  margin-top: 0;
+}
+
+.chat {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  height: 300px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bubble {
+  display: inline-block;
+  max-width: 70%;
+  padding: 10px 12px;
+  border-radius: 16px;
+  line-height: 1.4;
+
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+
+  align-self: flex-start;   /* ✅ 一条消息占一行，默认靠左 */
+}
+
+.bubble.bot {
+  background: #f0f0f0;
+}
+
+.bubble.user {
+  background: #dbe7ff;
+  align-self: flex-end;     /* ✅ 靠右 */
+  text-align: left;         /* ✅ 更自然 */
+}
+
+.input-area {
+  display: flex;
+  gap: 8px;
+}
+
+.input-area input {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.input-area button {
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.debug {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+/* Typing indicator (animated dots) */
+.bubble.typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+.bubble.typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+  animation: typingDot 1.2s infinite ease-in-out;
+}
+
+.bubble.typing span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.bubble.typing span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typingDot {
+  0%, 80%, 100% { opacity: 0.35; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
