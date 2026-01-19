@@ -94,6 +94,13 @@ const ES_SENTENCES = {
   reasonableMulti: "These are reasonable questions.",
 };
 
+function normalize(s) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // Detect follow-up intent by pragmatic function (NOT by grammar form)
 function pickESForType3Followup(userText, session) {
   const raw = String(userText || "").trim();
