@@ -14,7 +14,7 @@ app.use(
       // allow curl/postman or same-origin
       if (!origin) return callback(null, true);
 
-      // allow Qualtrics (包含 preview )
+      // allow Qualtrics (preview 也会用 qualtricsusercontent.com)
       if (
         origin.includes("qualtrics.com") ||
         origin.includes("qualtricsusercontent.com")
@@ -22,8 +22,8 @@ app.use(
         return callback(null, true);
       }
 
-      // allow Netlify (我的前端网站)
-      if (origin === "https://chatbotexp.netlify.app") {
+      // allow Netlify
+      if (origin.includes("netlify.app")) {
         return callback(null, true);
       }
 
@@ -32,12 +32,16 @@ app.use(
         return callback(null, true);
       }
 
+      // otherwise block
       return callback(new Error("Not allowed by CORS: " + origin));
     },
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type"],
   })
 );
 
-app.use(bodyParser.json());
+// 让 preflight 更稳
+app.options("*", cors());
 
 // =====================
 // 0) Definitions placeholders
