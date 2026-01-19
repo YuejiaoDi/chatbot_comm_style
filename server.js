@@ -8,36 +8,39 @@ dotenv.config();
 const dialogues = require("./4_types_bots");
 
 const app = express();
+
+// 先打日志（可选，但强烈建议保留一阵子）
+app.use((req, res, next) => {
+  console.log("[REQ]", req.method, req.path, "Origin=", req.headers.origin);
+  next();
+});
+
 const corsOptions = {
   origin: function (origin, callback) {
-    // allow curl/postman or same-origin
     if (!origin) return callback(null, true);
 
-    // ✅ allow Netlify（你的前端域名）
-    if (origin === "https://chatbotexp.netlify.app") return callback(null, true);
+    if (
+      origin.includes("qualtrics.com") ||
+      origin.includes("qualtricsusercontent.com")
+    ) return callback(null, true);
 
-    // ✅ 如果你以后 Netlify 换了站点名，也可以保留这个兜底
-    if (origin.endsWith(".netlify.app")) return callback(null, true);
+    if (origin.includes("netlify.app")) return callback(null, true);
 
-    // allow Qualtrics
-    if (origin.includes("qualtrics.com") || origin.includes("qualtricsusercontent.com")) {
-      return callback(null, true);
-    }
-
-    // allow local dev
     if (origin.startsWith("http://localhost")) return callback(null, true);
 
-    // otherwise block
-    return callback(new Error("Not allowed by CORS: " + origin));
+    // 不要 throw error，直接拒绝
+    return callback(null, false);
   },
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type"],
 };
 
 app.use(cors(corsOptions));
-// ✅ 关键：preflight(OPTIONS) 也必须走同一套 corsOptions
-app.options("*", cors(corsOptions));
 
+// ✅ 重点：这里别用 "*"
+app.options(/.*/, cors(corsOptions));
+
+app.use(bodyParser.json());
 
 // =====================
 // 0) Definitions placeholders
