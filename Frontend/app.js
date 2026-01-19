@@ -4,7 +4,7 @@ const sendBtn = document.getElementById("send");
 const debugEl = document.getElementById("debug");
 const typingTpl = document.getElementById("typing-template");
 
-const API_URL = "http://localhost:3000/chat";
+const API_URL = "https://chatbot-comm.onrender.com/chat";
 
 const TYPING_DELAY_MS = 2000;
 
