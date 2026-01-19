@@ -8,40 +8,36 @@ dotenv.config();
 const dialogues = require("./4_types_bots");
 
 const app = express();
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // allow curl/postman or same-origin
-      if (!origin) return callback(null, true);
+const corsOptions = {
+  origin: function (origin, callback) {
+    // allow curl/postman or same-origin
+    if (!origin) return callback(null, true);
 
-      // allow Qualtrics (preview 也会用 qualtricsusercontent.com)
-      if (
-        origin.includes("qualtrics.com") ||
-        origin.includes("qualtricsusercontent.com")
-      ) {
-        return callback(null, true);
-      }
+    // ✅ allow Netlify（你的前端域名）
+    if (origin === "https://chatbotexp.netlify.app") return callback(null, true);
 
-      // allow Netlify
-      if (origin.includes("netlify.app")) {
-        return callback(null, true);
-      }
+    // ✅ 如果你以后 Netlify 换了站点名，也可以保留这个兜底
+    if (origin.endsWith(".netlify.app")) return callback(null, true);
 
-      // allow local dev
-      if (origin.startsWith("http://localhost")) {
-        return callback(null, true);
-      }
+    // allow Qualtrics
+    if (origin.includes("qualtrics.com") || origin.includes("qualtricsusercontent.com")) {
+      return callback(null, true);
+    }
 
-      // otherwise block
-      return callback(new Error("Not allowed by CORS: " + origin));
-    },
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type"],
-  })
-);
+    // allow local dev
+    if (origin.startsWith("http://localhost")) return callback(null, true);
 
-// 让 preflight 更稳
-app.options("*", cors());
+    // otherwise block
+    return callback(new Error("Not allowed by CORS: " + origin));
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+};
+
+app.use(cors(corsOptions));
+// ✅ 关键：preflight(OPTIONS) 也必须走同一套 corsOptions
+app.options("*", cors(corsOptions));
+
 
 // =====================
 // 0) Definitions placeholders
