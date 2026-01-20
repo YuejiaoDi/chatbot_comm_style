@@ -5,16 +5,16 @@
 body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
-  background: #e7eef2;
+  background: #f5f7fa;  /* 比 #e7eef2 更淡 */
 }
 
 .app {
-  max-width: 600px;
-  margin: 40px auto;
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  max-width: 680px;              /* 稍微宽一点，更像聊天 */
+  margin: 0 auto;
+  background: #eef3f8;           /* ✅ 背景2：浅蓝 */
+  border-radius: 18px;
+  padding: 22px;                 /* 蓝色边距 */
+  box-shadow: none;              /* 不要大阴影 */
 }
 
 h1 {
@@ -23,16 +23,17 @@ h1 {
 }
 
 .chat {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 12px;
-  height: 300px;
+  background: #ffffff;           /* ✅ 背景1：纯白 */
+  border: 1px solid #d9dee5;
+  border-radius: 14px;
+  padding: 18px;
+  height: 340px;                 /* 比现在稍微高一点 */
   overflow-y: auto;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .bubble {
@@ -50,11 +51,11 @@ h1 {
 }
 
 .bubble.bot {
-  background: #f0f0f0;
+  background: #f5f6f8;
 }
 
 .bubble.user {
-  background: #dbe7ff;
+  background: #e3ecff;
   align-self: flex-end;     /* ✅ 靠右 */
   text-align: left;         /* ✅ 更自然 */
 }

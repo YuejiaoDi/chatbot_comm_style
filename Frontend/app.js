@@ -24,7 +24,7 @@ let sessionId =
 // server 随机分配（前端不再传 conditionId）
 let conditionId = "(pending)";
 
-const DEBUG = true; // 想隐藏就改成 false
+const DEBUG = false; // 想隐藏就改成 false
 
 function renderDebug(extra = "") {
   if (!DEBUG) return;
@@ -34,18 +34,27 @@ function renderDebug(extra = "") {
 
 renderDebug();
 
+function scrollToBottom() {
+  requestAnimationFrame(() => {
+    chatEl.scrollTop = chatEl.scrollHeight;
+    requestAnimationFrame(() => {
+      chatEl.scrollTop = chatEl.scrollHeight;
+    });
+  });
+}
+
 function addBubble(text, who) {
   const div = document.createElement("div");
   div.className = `bubble ${who}`;
   div.textContent = text;
   chatEl.appendChild(div);
-  chatEl.scrollTop = chatEl.scrollHeight;
+  scrollToBottom();  
 }
 
 function addTypingBubble() {
   const node = typingTpl.content.firstElementChild.cloneNode(true);
   chatEl.appendChild(node);
-  chatEl.scrollTop = chatEl.scrollHeight;
+  scrollToBottom();   
   return node;
 }
 
@@ -103,6 +112,7 @@ async function sendToServer(userText) {
       const lastBubble = chatEl.querySelector(".bubble.bot:last-child");
       if (lastBubble) lastBubble.textContent = data.reply;
       else addBubble(data.reply, "bot");
+      scrollToBottom();
 
       return; // ✅ success
     } catch (err) {
@@ -139,6 +149,7 @@ async function handleSend() {
     renderDebug();
 
     typingBubble.textContent = data.reply;
+    scrollToBottom();
 
     if (data.done) {
       inputEl.disabled = true;
