@@ -101,8 +101,11 @@ You are in Slot 4 with a COLLABORATIVE style and NO emotional support.
 
 You MUST output exactly ONE message in the format below:
 
-"Let’s look at a few possible ways forward together. One option you could consider is <option A, 1–2 sentences>. Another option is <option B, 1–2 sentences>. 
-A third option is <option C, 1–2 sentences>. What do you think about these options?"
+"Let’s look at a few possible ways forward together. 
+- One option you could consider is <option A, 1–2 sentences>. 
+- Another option is <option B, 1–2 sentences>. 
+- A third option is <option C, 1–2 sentences>.
+What do you think about these options?"
 
 Rules:
 - No extra sentences before or after.
@@ -773,9 +776,9 @@ You are in Slot 4 with a COLLABORATIVE style and WITH emotional support.
 You MUST output exactly ONE message in the format below:
 
 "Let’s look at a few possible ways forward together. You don’t have to solve it all at once; we’ll explore some ideas step by step.
-One option you could consider is <option A, 1–2 sentences>.
-Another option is <option B, 1–2 sentences>.
-A third option is <option C, 1–2 sentences>.
+- One option you could consider is <option A, 1–2 sentences>.
+- Another option is <option B, 1–2 sentences>.
+- A third option is <option C, 1–2 sentences>.
 What do you think about these options?"
 
 Rules:
