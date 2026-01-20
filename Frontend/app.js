@@ -67,31 +67,54 @@ async function sendToServer(userText) {
   return res.json(); // { reply, slotId, done, conditionId, ... }
 }
 
-// ✅ Page load: get Slot 0 automatically (no typing indicator)
+// ✅ Page load: get Slot 0 automatically (retry on cold start; no scary error)
 (async function init() {
-  try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId }),
-    });
+  // Show a neutral loading message (NOT an error)
+  addBubble("Loading...", "bot");
 
-    if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      throw new Error(t || "Init server error");
+  let attempts = 0;
+
+  while (attempts < 20) {
+    try {
+      attempts += 1;
+
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
+
+      if (!res.ok) {
+        await sleep(2000);
+        continue;
+      }
+
+      const data = await res.json();
+
+      // Update conditionId (from server)
+      conditionId = data.conditionId || conditionId;
+
+      if (DEBUG) {
+        debugEl.style.display = "block";
+        debugEl.textContent = `sessionId: ${sessionId} | conditionId: ${conditionId}`;
+      }
+
+      // Replace the "Loading..." bubble with real first message
+      const lastBubble = chatEl.querySelector(".bubble.bot:last-child");
+      if (lastBubble) lastBubble.textContent = data.reply;
+      else addBubble(data.reply, "bot");
+
+      return; // ✅ success
+    } catch (err) {
+      await sleep(2000);
     }
+  }
 
-    const data = await res.json();
-
-    // ===== 随机分组结果（来自 server）=====
-    conditionId = data.conditionId || conditionId;
-    renderDebug();
-
-    addBubble(data.reply, "bot"); // slot 0
-  } catch (err) {
-    console.error(err);
-    addBubble("⚠️ Could not load the first message.", "bot");
-    renderDebug(`init failed: ${String(err)}`);
+  // If still failing after retries, keep it neutral
+  const lastBubble = chatEl.querySelector(".bubble.bot:last-child");
+  if (lastBubble) {
+    lastBubble.textContent =
+      "Loading is taking longer than usual. Please wait a moment and do not refresh.";
   }
 })();
 

@@ -835,9 +835,43 @@ app.post("/chat", async (req, res) => {
     });
   }
 
-  if (!userText) {
-    return res.status(400).json({ error: "Empty user message" });
+  // If empty user message arrives (common during cold start / double init),
+// do NOT error. Just repeat last assistant message or re-send Slot 0.
+// This prevents participants seeing an error screen.
+if (!userText) {
+  // If not started yet, behave like init and send Slot 0
+  if (!session.started) {
+    session.started = true;
+    session.slotIndex = 0;
+
+    const slot0 = condition.slots[0];
+    const reply = slot0.fixedBotText;
+
+    session.history.push({ role: "assistant", slotId: 0, text: reply, ts: Date.now() });
+
+    return res.json({
+      reply,
+      slotId: 0,
+      done: false,
+      sessionId,
+      conditionId: session.conditionId,
+      repeated: true,
+    });
   }
+
+  // If already started, repeat the last assistant message (fallback to Slot0)
+  const lastAssistant = [...session.history].reverse().find((h) => h.role === "assistant");
+  const reply = lastAssistant?.text || condition?.slots?.[0]?.fixedBotText || "Hi.";
+
+  return res.json({
+    reply,
+    slotId: lastAssistant?.slotId ?? 0,
+    done: false,
+    sessionId,
+    conditionId: session.conditionId,
+    repeated: true,
+  });
+}
 
   // ---- crisis check ----
   if (containsCrisisLanguage(userText)) {
