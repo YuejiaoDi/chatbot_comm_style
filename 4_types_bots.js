@@ -385,7 +385,7 @@ Decision rule:
 
 Otherwise, output exactly ONE message in the format below:
 
-"It seems the main source of your stress is [keywords], because [reason]. I will provide some advice. You can continue or end the conversation."
+"The main source of your stress is [keywords], because [reason]. I will provide some advice. You can continue or end the conversation."
 
 Rules:
 - [keywords]: 2–8 words summarizing the user's Slot 0 issue.
@@ -1116,7 +1116,7 @@ Decision rule:
 
 Otherwise, output exactly ONE message in the format below:
 
-"I'm sorry to hear that. It's a tough situation. It seems the main source of your stress is [keywords], because [reason]. I will provide some advice. You can continue or end the conversation."
+"I'm sorry to hear that. It's a tough situation. The main source of your stress is [keywords], because [reason]. I will provide some advice. You can continue or end the conversation."
 
 Rules:
 - [keywords]: 2–8 words summarizing the user's Slot 0 issue.
