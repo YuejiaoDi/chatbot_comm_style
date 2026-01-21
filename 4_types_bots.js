@@ -775,7 +775,7 @@ You are in Slot 4 with a COLLABORATIVE style and WITH emotional support.
 
 You MUST output exactly ONE message in the format below:
 
-"Let’s consider a few possible solutions. You don’t have to solve it all at once; we’ll explore some ideas step by step.
+"It’s good that you’ve started thinking about next steps. Let’s consider a few possible solutions. 
 - One option you could consider is <option A, 1 sentence>.
 - Another option is <option B, 1 sentence>.
 - A third option is <option C, 1 sentence>.
@@ -1138,7 +1138,7 @@ Output constraints:
 You are in Slot 2 with a DIRECTIVE style WITH emotional support. 
 
 MUST exactly use this format:
-" You don’t have to solve it all at once; you can explore some ideas step by step.
+" It’s good that you’ve started thinking about next steps. 
 - First, <option A, 1–2 sentences>.
 - Next, <option B, 1–2 sentences>.
 - Then, <option C, 1–2 sentences>."
