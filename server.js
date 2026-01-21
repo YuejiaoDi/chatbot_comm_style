@@ -1,4 +1,7 @@
 // server.js — Node18+ fetch (CommonJS)
+
+const { Pool } = require("pg");
+
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -7,7 +10,59 @@ const dotenv = require("dotenv");
 dotenv.config();
 const dialogues = require("./4_types_bots");
 
+console.log("[DB] DATABASE_URL exists?", !!process.env.DATABASE_URL);
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes("localhost")
+    ? false
+    : { rejectUnauthorized: false },
+});
+
+async function logToDbSafe(sessionId, conditionId, role, slotId, content) {
+  try {
+    if (!sessionId || !role || !content) return;
+
+    await pool.query(
+      `INSERT INTO public.messages
+       (session_id, role, condition_id, slot_id, content)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        sessionId,
+        role,
+        conditionId || null,
+        Number.isFinite(slotId) ? slotId : null,
+        content,
+      ]
+    );
+  } catch (e) {
+    console.error("[DB LOG ERROR]", e);
+  }
+}
+
+async function ensureSessionRow(sessionId, conditionId) {
+  await pool.query(
+    `INSERT INTO public.sessions (session_id, condition_id)
+     VALUES ($1, $2)
+     ON CONFLICT (session_id) DO NOTHING`,
+    [sessionId, conditionId]
+  );
+}
+
 const app = express();
+
+// ===== DB helpers =====
+async function ensureSession(sessionId, conditionId) {
+  if (!sessionId) return;
+
+  await pool.query(
+    `INSERT INTO public.sessions (session_id, condition_id)
+     VALUES ($1, $2)
+     ON CONFLICT (session_id) DO UPDATE
+       SET condition_id = COALESCE(public.sessions.condition_id, EXCLUDED.condition_id)`,
+    [sessionId, conditionId || null]
+  );
+}
 
 // 先打日志（可选，但强烈建议保留一阵子）
 app.use((req, res, next) => {
@@ -791,6 +846,8 @@ app.post("/chat", async (req, res) => {
   if (requestedConditionId) session.conditionId = String(requestedConditionId);
   if (!session.conditionId) session.conditionId = pickRandomConditionId();
 
+  await ensureSessionRow(sessionId, session.conditionId);
+
   const condition = dialogues[session.conditionId];
   if (!condition) {
     return res.status(500).json({ error: `Condition not found: ${session.conditionId}` });
@@ -825,6 +882,7 @@ app.post("/chat", async (req, res) => {
     const reply = slot0.fixedBotText;
 
     session.history.push({ role: "assistant", slotId: 0, text: reply, ts: Date.now() });
+    logToDbSafe(sessionId, session.conditionId, "assistant", 0, reply);
 
     return res.json({
       reply,
@@ -848,6 +906,8 @@ if (!userText) {
     const reply = slot0.fixedBotText;
 
     session.history.push({ role: "assistant", slotId: 0, text: reply, ts: Date.now() });
+    logToDbSafe(sessionId, session.conditionId, "assistant", 0, reply);
+
 
     return res.json({
       reply,
@@ -880,7 +940,11 @@ if (!userText) {
 
     const reply = crisisResponse();
     session.history.push({ role: "user", slotId: null, text: userText, ts: Date.now() });
+    logToDbSafe(sessionId, session.conditionId, "user", null, userText);
+    
     session.history.push({ role: "assistant", slotId: null, text: reply, ts: Date.now() });
+    logToDbSafe(sessionId, session.conditionId, "assistant", null, reply);
+
 
     return res.json({ reply, done: true, sessionId, slotId: null, conditionId: session.conditionId });
   }
@@ -895,7 +959,11 @@ if (!userText) {
     const reply = "You have reached the end of the conversation. Thank you for your participation.";
 
     session.history.push({ role: "user", slotId: prevBotSlotId, text: userText, ts: Date.now() });
+    logToDbSafe(sessionId, session.conditionId, "user", prevBotSlotId, userText);
+    
     session.history.push({ role: "assistant", slotId: null, text: reply, ts: Date.now() });
+    logToDbSafe(sessionId, session.conditionId, "assistant", null, reply);
+
 
     return res.json({ reply, done: true, sessionId, slotId: null, conditionId: session.conditionId });
   }
@@ -912,7 +980,12 @@ if (!userText) {
     const repair = clarificationReplyForSlot(condition, prevBotSlotId, type);
 
     session.history.push({ role: "user", slotId: prevBotSlotId, text: userText, ts: Date.now() });
+    logToDbSafe(sessionId, session.conditionId, "user", prevBotSlotId, userText);
+    
     session.history.push({ role: "assistant", slotId: prevBotSlotId, text: repair, ts: Date.now() });
+    logToDbSafe(sessionId, session.conditionId, "assistant", prevBotSlotId, repair);
+
+
 
     return res.json({
       reply: repair,
@@ -926,8 +999,16 @@ if (!userText) {
   // =====================
 
   // store user answer + update memory
-  session.history.push({ role: "user", slotId: prevBotSlotId, text: userText, ts: Date.now() });
-  updateMemoryFromUserAnswer(session, prevBotSlotId, userText);
+  session.history.push({
+  role: "user",
+  slotId: prevBotSlotId,
+  text: userText,
+  ts: Date.now(),
+});
+logToDbSafe(sessionId, session.conditionId, "user", prevBotSlotId, userText);
+
+updateMemoryFromUserAnswer(session, prevBotSlotId, userText);
+
 
   // move to next slot
   session.slotIndex += 1;
@@ -1032,7 +1113,9 @@ if (!userText) {
       slotId: currentSlotId,
       text: reply,
       ts: Date.now(),
-    });
+});
+logToDbSafe(sessionId, session.conditionId, "assistant", currentSlotId, reply);
+
 
     return res.json({
       reply,
@@ -1329,11 +1412,13 @@ if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
 
     // save assistant reply
     session.history.push({
-      role: "assistant",
-      slotId: currentSlotId,
-      text: reply,
-      ts: Date.now(),
-    });
+  role: "assistant",
+  slotId: currentSlotId,
+  text: reply,
+  ts: Date.now(),
+});
+logToDbSafe(sessionId, session.conditionId, "assistant", currentSlotId, reply);
+
 
     // HARD END
     if (replyIndicatesDone(reply)) {
@@ -1359,6 +1444,34 @@ if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
   } catch (e) {
     console.error("Server caught error:", e);
     return res.status(500).json({ error: "server_error", detail: String(e) });
+  }
+});
+
+app.get("/dbtest", async (req, res) => {
+  try {
+    const sid = "dbtest_" + Date.now();
+
+    // 先写入一条
+    await pool.query(
+      `INSERT INTO public.messages (session_id, role, slot_id, content)
+       VALUES ($1, $2, $3, $4)`,
+      [sid, "assistant", 0, "hello_db"]
+    );
+
+    // 再读出来验证
+    const q = await pool.query(
+      `SELECT session_id, role, slot_id, content, ts
+       FROM public.messages
+       WHERE session_id = $1
+       ORDER BY ts DESC
+       LIMIT 5`,
+      [sid]
+    );
+
+    res.json({ ok: true, sid, rows: q.rows });
+  } catch (e) {
+    console.error("[DBTEST ERROR]", e);
+    res.status(500).json({ ok: false, error: String(e) });
   }
 });
 
