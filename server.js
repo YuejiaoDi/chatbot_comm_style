@@ -575,25 +575,20 @@ function replyIndicatesDone(reply) {
   );
 }
 
-
 // User explicit end intent
 function isEndIntent(userText, prevBotSlotId, type) {
   const t = normalize(userText);
   if (!t) return false;
 
-  const explicitWords = ["end", "stop", "exit", "quit", "leave", "terminate"];
-  const explicitRe = new RegExp(`\\b(${explicitWords.join("|")})\\b`, "i");
-
-  // ✅ Allow end on different slots by type
-  // Type1/Type3: end only allowed after Slot 2 or 3 (same as before)
-  // Type2/Type4: Slot 1 already offers "continue or end", so allow end there too
+  // 允许在哪些 slot 结束（按 type）
   const allowedSlots = new Set([2, 3]);
   if (type === "type2" || type === "type4") allowedSlots.add(1);
 
-  // Explicit end words (slot-gated)
-  if (allowedSlots.has(prevBotSlotId) && explicitRe.test(t)) return true;
+  // 明确结束词
+  const explicitWords = ["end", "stop", "exit", "quit", "leave", "terminate"];
+  const hasExplicitEnd = explicitWords.some((w) => t.includes(w));
 
-  // Refuse advice phrases (slot-gated)
+  // 拒绝建议句式
   const refuseAdvicePhrases = [
     "no advice",
     "i don't want advice",
@@ -604,20 +599,15 @@ function isEndIntent(userText, prevBotSlotId, type) {
     "i want to stop",
     "let's end",
   ];
-  if (noMeansEndSlots.has(prevBotSlotId) && refuseAdvicePhrases.some((p) => t.includes(p))) return true;
+  const refusesAdvice = refuseAdvicePhrases.some((p) => t.includes(p));
 
-  // Simple "no/nope" should ONLY end the chat on the explicit "continue/advice or end" question slot.
-// Otherwise, "no" might just mean "I don't know / I haven't tried anything / I don't want to say".
-const isBareNo = (t === "no" || t === "nope");
+  // bare no/nope
+  const isNo = t === "no" || t === "nope";
 
-// For Type1/Type3: the explicit yes/end question is Slot 3
-// For Type2/Type4: the explicit continue/end question is Slot 1
-const noMeansEndSlots =
-  (type === "type1" || type === "type3") ? new Set([3]) :
-  (type === "type2" || type === "type4") ? new Set([1]) :
-  new Set();
+  // 只有在允许的 slot 才能触发结束
+  if (!allowedSlots.has(prevBotSlotId)) return false;
 
-if (isBareNo && noMeansEndSlots.has(prevBotSlotId)) return true;
+  return hasExplicitEnd || refusesAdvice || isNo;
 }
 
 // =====================
