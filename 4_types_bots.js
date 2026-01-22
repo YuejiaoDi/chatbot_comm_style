@@ -20,13 +20,13 @@ module.exports = {
       0: {
         name: "Greetings",
         fixedBotText:
-          "Hi, I am your chat partner to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?",
+          "Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?",
         instruction: `
 You MUST output exactly the fixed greeting sentence below (do not paraphrase this slot).
 After outputting it, stop. Do NOT ask additional questions in this slot.
 
 Fixed sentence:
-"Hi, I am your chat partner to talk about your stress. Can you please tell me the academic-related issue that has been stressful to you recently?"
+"Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?"
 `,
         extract: [],
       },
@@ -362,13 +362,13 @@ Output: ONE message only.
       0: {
         name: "Greetings",
         fixedBotText:
-          "Hi, I am your chat partner to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?",
+          "Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?",
         instruction: `
 You MUST output exactly the fixed greeting sentence below (do not paraphrase this slot).
 After outputting it, stop. Do NOT ask additional questions in this slot.
 
 Fixed sentence:
-"Hi, I am your chat partner to talk about your stress. Can you please tell me the academic-related issue that has been stressful to you recently?"
+"Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?"
 `,
         extract: [],
       },
@@ -656,13 +656,13 @@ collaborative_ES: {
     0: {
       name: "Greetings",
       fixedBotText:
-        "Hi, I am your chat partner to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?",
+        "Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?",
       instruction: `
 You MUST output exactly the fixed greeting sentence below (do not paraphrase this slot).
 After outputting it, stop. Do NOT ask additional questions in this slot.
 
 Fixed sentence:
-"Hi, I am your chat partner to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?"
+"Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?"
 `,
       extract: [],
     },
@@ -1093,13 +1093,13 @@ Hard constraints:
       0: {
         name: "Greetings",
         fixedBotText:
-          "Hi, I am your chat partner to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?",
+          "Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?",
         instruction: `
 You MUST output exactly the fixed greeting sentence below (do not paraphrase this slot).
 After outputting it, stop. Do NOT ask additional questions in this slot.
 
 Fixed sentence:
-"Hi, I am your chat partner to talk about your stress. Can you please tell me the academic-related issue that has been stressful to you recently?"
+"Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?"
 `,
         extract: [],
       },

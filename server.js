@@ -987,6 +987,7 @@ console.log("[END DEBUG]", {
 });
 
   // end intent
+
   if (isEndIntent(userText, prevBotSlotId, type)) {
     session.done = true;
     const reply = "You have reached the end of the conversation. Thank you for your participation.";
