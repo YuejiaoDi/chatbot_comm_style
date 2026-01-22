@@ -1441,26 +1441,27 @@ logToDbSafe(sessionId, session.conditionId, "assistant", currentSlotId, reply);
       conditionId: session.conditionId,
       memory: session.memory,
     });
-  } catch (e) {
-    console.error("Server caught error:", e);
-    return res.status(500).json({ error: "server_error", detail: String(e) });
+      } catch (e) {
+    console.error("[CHAT ERROR]", e);
+    return res.status(500).json({ ok: false, error: String(e) });
   }
 });
 
 app.get("/dbtest", async (req, res) => {
   try {
     const sid = "dbtest_" + Date.now();
+    const conditionId = "dbtest_condition";
 
-    // 先写入一条
+    await ensureSessionRow(sid, conditionId);
+
     await pool.query(
-      `INSERT INTO public.messages (session_id, role, slot_id, content)
-       VALUES ($1, $2, $3, $4)`,
-      [sid, "assistant", 0, "hello_db"]
+      `INSERT INTO public.messages (session_id, role, condition_id, slot_id, content)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [sid, "assistant", conditionId, 0, "hello_db"]
     );
 
-    // 再读出来验证
     const q = await pool.query(
-      `SELECT session_id, role, slot_id, content, ts
+      `SELECT session_id, role, condition_id, slot_id, content, ts
        FROM public.messages
        WHERE session_id = $1
        ORDER BY ts DESC
@@ -1477,3 +1478,4 @@ app.get("/dbtest", async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
