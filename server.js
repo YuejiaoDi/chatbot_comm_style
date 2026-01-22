@@ -580,15 +580,11 @@ function isEndIntent(userText, prevBotSlotId, type) {
   const t = normalize(userText);
   if (!t) return false;
 
-  // 允许在哪些 slot 结束（按 type）
-  const allowedSlots = new Set([2, 3]);
-  if (type === "type2" || type === "type4") allowedSlots.add(1);
-
-  // 明确结束词
+  // 1) 明确结束词：在允许结束的 slots 才生效
   const explicitWords = ["end", "stop", "exit", "quit", "leave", "terminate"];
   const hasExplicitEnd = explicitWords.some((w) => t.includes(w));
 
-  // 拒绝建议句式
+  // 2) 拒绝建议/想结束：在允许结束的 slots 才生效
   const refuseAdvicePhrases = [
     "no advice",
     "i don't want advice",
@@ -601,13 +597,33 @@ function isEndIntent(userText, prevBotSlotId, type) {
   ];
   const refusesAdvice = refuseAdvicePhrases.some((p) => t.includes(p));
 
-  // bare no/nope
-  const isNo = t === "no" || t === "nope";
+  // 3) bare no/nope：只在“明确给了 continue/end 选择”的那个 slot 才算结束
+  const isBareNo = t === "no" || t === "nope";
 
-  // 只有在允许的 slot 才能触发结束
-  if (!allowedSlots.has(prevBotSlotId)) return false;
+  // ---- slot gating ----
+  // Type1/Type3: Slot 3 才是“要不要建议/继续”的问题
+  // Type2/Type4: Slot 1 才是“continue or end”的问题
+  const noMeansEndSlots =
+    type === "type1" || type === "type3"
+      ? new Set([3])
+      : type === "type2" || type === "type4"
+      ? new Set([1])
+      : new Set();
 
-  return hasExplicitEnd || refusesAdvice || isNo;
+  // 哪些 slot 允许通过 “end/stop/…” 或 “I don't want advice” 来结束
+  // Type1/Type3: 允许在 Slot 2 或 3 结束（你原本的设计）
+  // Type2/Type4: 允许在 Slot 1/2/3 结束（因为 Slot1 就给了 end 选项）
+  const allowedSlots = new Set([2, 3]);
+  if (type === "type2" || type === "type4") allowedSlots.add(1);
+
+  // ---- apply rules ----
+  // bare no：只有在 noMeansEndSlots 才结束
+  if (isBareNo) return noMeansEndSlots.has(prevBotSlotId);
+
+  // 明确 end / refuse advice：只在 allowedSlots 才结束
+  if (allowedSlots.has(prevBotSlotId) && (hasExplicitEnd || refusesAdvice)) return true;
+
+  return false;
 }
 
 // =====================
