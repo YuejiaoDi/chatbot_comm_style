@@ -975,6 +975,17 @@ if (!userText) {
   const prevIndex = session.slotIndex;
   const prevBotSlotId = condition.slotOrder[prevIndex];
 
+  const lastAssistant = [...session.history].reverse().find(h => h.role === "assistant");
+console.log("[END DEBUG]", {
+  conditionId: session.conditionId,
+  type,
+  prevIndex,
+  prevBotSlotId,
+  lastAssistantSlotId: lastAssistant?.slotId,
+  lastAssistantText: lastAssistant?.text,
+  userText
+});
+
   // end intent
   if (isEndIntent(userText, prevBotSlotId, type)) {
     session.done = true;
