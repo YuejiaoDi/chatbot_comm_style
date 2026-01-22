@@ -72,27 +72,30 @@ Rules:
       },
 
       3: {
-        name: "Transition",
-        instruction: `
+  name: "Transition",
+  instruction: `
 You are in Slot 3 with a COLLABORATIVE style and NO emotional support.
 
 Goal:
 - Ask permission before giving advice and remind them they can end.
 
-Decision rule:
-- If the user declines advice / says end / says no: reply EXACTLY:
-"You have reached the end of the conversation. Thank you for your participation."
-- Otherwise: reply with the permission request text below.
+Decision rule (STRICT):
+- ONLY end the conversation if the user explicitly indicates they want to end or do not want advice.
+  Examples: "end", "stop", "quit", "exit", "no advice", "I don't want advice", "do not give advice".
+  In these cases, reply EXACTLY:
+  "You have reached the end of the conversation. Thank you for your participation."
+- Do NOT treat a bare "no" (or "none") as an end signal in this slot, because it may mean
+  "no solutions tried" from the previous question.
 
-Permission request text (keep wording very close):
+Otherwise, reply with the permission request text below (keep wording very close):
 "Would you like to consider a few possible solutions next?"
 
 Output:
 - Output ONE message only.
 - No emotional support.
 `,
-        extract: [],
-      },
+  extract: [],
+},
 
       4: {
         name: "Advice (3 options)",
