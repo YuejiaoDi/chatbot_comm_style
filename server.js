@@ -576,17 +576,24 @@ function replyIndicatesDone(reply) {
 }
 
 // User explicit end intent
-function isEndIntent(userText, prevBotSlotId) {
+// User explicit end intent
+function isEndIntent(userText, prevBotSlotId, type) {
   const t = normalize(userText);
   if (!t) return false;
 
   const explicitWords = ["end", "stop", "exit", "quit", "leave", "terminate"];
   const explicitRe = new RegExp(`\\b(${explicitWords.join("|")})\\b`, "i");
 
-  if ((prevBotSlotId === 2 || prevBotSlotId === 3) && explicitRe.test(t)) {
-    return true;
-  }
+  // ✅ Allow end on different slots by type
+  // Type1/Type3: end only allowed after Slot 2 or 3 (same as before)
+  // Type2/Type4: Slot 1 already offers "continue or end", so allow end there too
+  const allowedSlots = new Set([2, 3]);
+  if (type === "type2" || type === "type4") allowedSlots.add(1);
 
+  // Explicit end words (slot-gated)
+  if (allowedSlots.has(prevBotSlotId) && explicitRe.test(t)) return true;
+
+  // Refuse advice phrases (slot-gated)
   const refuseAdvicePhrases = [
     "no advice",
     "i don't want advice",
@@ -597,11 +604,10 @@ function isEndIntent(userText, prevBotSlotId) {
     "i want to stop",
     "let's end",
   ];
-  if (refuseAdvicePhrases.some((p) => t.includes(p))) return true;
+  if (allowedSlots.has(prevBotSlotId) && refuseAdvicePhrases.some((p) => t.includes(p))) return true;
 
-  if ((t === "no" || t === "nope") && (prevBotSlotId === 2 || prevBotSlotId === 3)) {
-    return true;
-  }
+  // Simple "no/nope" (slot-gated)
+  if ((t === "no" || t === "nope") && allowedSlots.has(prevBotSlotId)) return true;
 
   return false;
 }
@@ -853,6 +859,8 @@ app.post("/chat", async (req, res) => {
     return res.status(500).json({ error: `Condition not found: ${session.conditionId}` });
   }
 
+  const type = condition?.factors?.type; // 只能出现一次
+
   // ---- HARD STOP states ----
   if (session.crisis) {
     return res.json({
@@ -954,7 +962,7 @@ if (!userText) {
   const prevBotSlotId = condition.slotOrder[prevIndex];
 
   // end intent
-  if (isEndIntent(userText, prevBotSlotId)) {
+  if (isEndIntent(userText, prevBotSlotId, type)) {
     session.done = true;
     const reply = "You have reached the end of the conversation. Thank you for your participation.";
 
@@ -971,7 +979,6 @@ if (!userText) {
   // =====================
   // REPAIR GATE (added; does NOT advance slot)
   // =====================
-  const type = condition?.factors?.type;
   const isType2or4 = type === "type2" || type === "type4";
   const isType1or3 = type === "type1" || type === "type3";
   const skipRepair = isType2or4 ? prevBotSlotId >= 3 : isType1or3 ? prevBotSlotId >= 4 : false;
