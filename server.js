@@ -606,10 +606,19 @@ function isEndIntent(userText, prevBotSlotId, type) {
   ];
   if (allowedSlots.has(prevBotSlotId) && refuseAdvicePhrases.some((p) => t.includes(p))) return true;
 
-  // Simple "no/nope" (slot-gated)
-  if ((t === "no" || t === "nope") && allowedSlots.has(prevBotSlotId)) return true;
+  // Simple "no/nope" should ONLY end the chat on the explicit "continue/advice or end" question slot.
+// Otherwise, "no" might just mean "I don't know / I haven't tried anything / I don't want to say".
+const isBareNo = (t === "no" || t === "nope");
 
-  return false;
+// For Type1/Type3: the explicit yes/end question is Slot 3
+// For Type2/Type4: the explicit continue/end question is Slot 1
+const noMeansEndSlots = new Set(
+  (type === "type1" || type === "type3") ? [3] :
+  (type === "type2" || type === "type4") ? [1] :
+  []
+);
+
+if (isBareNo && noMeansEndSlots.has(prevBotSlotId)) return true;
 }
 
 // =====================
