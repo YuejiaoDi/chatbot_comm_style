@@ -388,7 +388,7 @@ Decision rule:
 
 Otherwise, output exactly ONE message in the format below:
 
-"The main source of your stress is [keywords]. I will provide some advice. Please type “continue” to proceed."
+"Ok, I will provide some advice. Please type “continue” to proceed."
 
 Rules:
 - [keywords]: 2–8 words summarizing the user's Slot 0 issue.
@@ -684,7 +684,7 @@ Required structure (ONE message total):
 2) Follow-up question using [keywords].
 
 Follow this format as close as possible:
-"I'm sorry to hear that you have to deal with [keywords]. It is a tough situation. Could you tell me more about what makes [keywords] stressful for you?"
+"I'm sorry to hear that. It's a tough situation, and many people would feel stressed in a similar situation. Could you tell me more about what makes [keywords] stressful for you?"
 
 Output constraints:
 - Output ONE message only.
@@ -720,7 +720,7 @@ You may use the example below ONLY when the user has clearly expressed distress
 or described why the issue is stressful.
 
 Example:
-"It is fine to feel that way. Anyone in your situation would find it stressful."
+"It is fine to feel that way."
 
 Then ask (ONE question):
 "What solutions have you considered or tried so far?"
@@ -1121,7 +1121,7 @@ Decision rule:
 
 Otherwise, output exactly ONE message in the format below:
 
-"I'm sorry to hear that. It's a tough situation. The main source of your stress is [keywords]. I will provide some advice. Please type “continue” to proceed."
+"I'm sorry to hear that. It's a tough situation, and many people would feel stressed in a similar situation. I will provide some advice. Please type “continue” to proceed."
 
 Rules:
 - [keywords]: 2–8 words summarizing the user's Slot 0 issue.
