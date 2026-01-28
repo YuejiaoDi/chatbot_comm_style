@@ -20,13 +20,13 @@ module.exports = {
       0: {
         name: "Greetings",
         fixedBotText:
-          "Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?",
+          "Hi, I’m your chatbot. Can you tell me one academic-related stress that you recently faced? We will talk about it and work on solutions together.",
         instruction: `
 You MUST output exactly the fixed greeting sentence below (do not paraphrase this slot).
 After outputting it, stop. Do NOT ask additional questions in this slot.
 
 Fixed sentence:
-"Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?"
+"Hi, I’m your chatbot. Can you tell me one academic-related stress that you recently faced? We will talk about it and work on solutions together."
 `,
         extract: [],
       },
@@ -108,7 +108,7 @@ You MUST output exactly ONE message in the format below:
 - One option you could consider is <option A, 1–2 sentences>. 
 - Another option is <option B, 1–2 sentences>. 
 - A third option is <option C, 1–2 sentences>.
-What do you think about these options?"
+We can talk more and find the best way forward. What do you think about these options?"
 
 Rules:
 - No extra sentences before or after.
@@ -365,13 +365,13 @@ Output: ONE message only.
       0: {
         name: "Greetings",
         fixedBotText:
-          "Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?",
+          "Hi, I’m your chatbot. Please tell me one academic-related stress that you recently faced. I will guide you and provide advice.",
         instruction: `
 You MUST output exactly the fixed greeting sentence below (do not paraphrase this slot).
 After outputting it, stop. Do NOT ask additional questions in this slot.
 
 Fixed sentence:
-"Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?"
+"Hi, I’m your chatbot. Please tell me one academic-related stress that you recently faced. I will guide you and provide advice."
 `,
         extract: [],
       },
@@ -388,11 +388,10 @@ Decision rule:
 
 Otherwise, output exactly ONE message in the format below:
 
-"The main source of your stress is [keywords], because [reason]. I will provide some advice. You can continue or end the conversation."
+"The main source of your stress is [keywords]. I will provide some advice. Please type “continue” to proceed."
 
 Rules:
 - [keywords]: 2–8 words summarizing the user's Slot 0 issue.
-- [reason]: use the user's explanation if provided; otherwise infer a plausible reason.
 - This slot is declarative only.
 
 Output constraints:
@@ -639,7 +638,7 @@ collaborative_ES: {
   emoBank: {
   core: [
     "I’m glad to hear that.",
-    "I understand.",
+    "I totally understand.",
     "It’s usual to take some time to figure out what doesn’t quite fit.",
     "That makes sense.",
     "I understand your concern.",
@@ -659,13 +658,13 @@ collaborative_ES: {
     0: {
       name: "Greetings",
       fixedBotText:
-        "Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?",
+        "Hi, I’m your chatbot. Can you tell me one academic-related stress that you recently faced? We can talk about it and work on solutions together.",
       instruction: `
 You MUST output exactly the fixed greeting sentence below (do not paraphrase this slot).
 After outputting it, stop. Do NOT ask additional questions in this slot.
 
 Fixed sentence:
-"Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?"
+"Hi, I’m your chatbot. Can you tell me one academic-related stress that you recently faced? We can talk about it and work on solutions together."
 `,
       extract: [],
     },
@@ -781,11 +780,11 @@ You are in Slot 4 with a COLLABORATIVE style and WITH emotional support.
 
 You MUST output exactly ONE message in the format below:
 
-"It’s good that you’ve started thinking about next steps. Let’s consider a few possible solutions. 
+"This is a great start—you're thinking about the next steps. Let’s consider a few possible solutions. 
 - One option you could consider is <option A, 1 sentence>.
 - Another option is <option B, 1 sentence>.
 - A third option is <option C, 1 sentence>.
-What do you think about these options?"
+We can talk more and find the best way forward. What do you think about these options?"
 
 Rules:
 - No extra sentences before or after this block.
@@ -1099,13 +1098,13 @@ Hard constraints:
       0: {
         name: "Greetings",
         fixedBotText:
-          "Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?",
+          "Hi, I’m your chatbot. Please tell me one academic-related stress that you recently faced. I will guide you and provide advice.",
         instruction: `
 You MUST output exactly the fixed greeting sentence below (do not paraphrase this slot).
 After outputting it, stop. Do NOT ask additional questions in this slot.
 
 Fixed sentence:
-"Hi, I am your chatbot to talk about your stress. Can you please tell me one academic-related issue that has been stressful to you recently?"
+"Hi, I’m your chatbot. Please tell me one academic-related stress that you recently faced. I will guide you and provide advice."
 `,
         extract: [],
       },
@@ -1122,11 +1121,10 @@ Decision rule:
 
 Otherwise, output exactly ONE message in the format below:
 
-"I'm sorry to hear that. It's a tough situation. The main source of your stress is [keywords], because [reason]. I will provide some advice. You can continue or end the conversation."
+"I'm sorry to hear that. It's a tough situation. The main source of your stress is [keywords]. I will provide some advice. Please type “continue” to proceed."
 
 Rules:
 - [keywords]: 2–8 words summarizing the user's Slot 0 issue.
-- [reason]: use the user's explanation if provided; otherwise infer a plausible reason.
 - This slot is declarative only.
 
 Output constraints:
@@ -1144,7 +1142,7 @@ Output constraints:
 You are in Slot 2 with a DIRECTIVE style WITH emotional support. 
 
 MUST exactly use this format:
-" It’s good that you’ve started thinking about next steps. 
+" This is a great start—you're thinking about the next steps. 
 - First, <option A, 1–2 sentences>.
 - Next, <option B, 1–2 sentences>.
 - Then, <option C, 1–2 sentences>."

@@ -581,8 +581,9 @@ function isEndIntent(userText, prevBotSlotId, type) {
   if (!t) return false;
 
   // 1) 明确结束词：在允许结束的 slots 才生效
-  const explicitWords = ["end", "stop", "exit", "quit", "leave", "terminate"];
-  const hasExplicitEnd = explicitWords.some((w) => t.includes(w));
+  const hasExplicitEnd =
+  /\b(end|stop|exit|quit|leave|terminate)\b/i.test(t) ||
+  /\bend\s+(this|the|our)?\s*(chat|conversation|study)\b/i.test(t);
 
   // 2) 拒绝建议/想结束：在允许结束的 slots 才生效
   const refuseAdvicePhrases = [
@@ -595,7 +596,14 @@ function isEndIntent(userText, prevBotSlotId, type) {
     "i want to stop",
     "let's end",
   ];
-  const refusesAdvice = refuseAdvicePhrases.some((p) => t.includes(p));
+  const refusesAdvice =
+  /\b(no\s+advice)\b/i.test(t) ||
+  /\b(i\s+do\s*not\s+want\s+(any\s+)?advice)\b/i.test(t) ||
+  /\b(i\s+don'?t\s+want\s+(any\s+)?advice)\b/i.test(t) ||
+  /\b(don'?t\s+give\s+advice)\b/i.test(t) ||
+  /\b(do\s+not\s+give\s+advice)\b/i.test(t) ||
+  /\b(i\s+want\s+to\s+(end|stop))\b/i.test(t) ||
+  /\b(let'?s\s+end)\b/i.test(t);
 
   // 3) bare no/nope：只在“明确给了 continue/end 选择”的那个 slot 才算结束
   const isBareNo = t === "no" || t === "nope";
@@ -1002,33 +1010,6 @@ console.log("[END DEBUG]", {
     return res.json({ reply, done: true, sessionId, slotId: null, conditionId: session.conditionId });
   }
 
-  // =====================
-  // REPAIR GATE (added; does NOT advance slot)
-  // =====================
-  const isType2or4 = type === "type2" || type === "type4";
-  const isType1or3 = type === "type1" || type === "type3";
-  const skipRepair = isType2or4 ? prevBotSlotId >= 3 : isType1or3 ? prevBotSlotId >= 4 : false;
-
-  if (!skipRepair && isClarificationRequest(userText)) {
-    const repair = clarificationReplyForSlot(condition, prevBotSlotId, type);
-
-    session.history.push({ role: "user", slotId: prevBotSlotId, text: userText, ts: Date.now() });
-    logToDbSafe(sessionId, session.conditionId, "user", prevBotSlotId, userText);
-    
-    session.history.push({ role: "assistant", slotId: prevBotSlotId, text: repair, ts: Date.now() });
-    logToDbSafe(sessionId, session.conditionId, "assistant", prevBotSlotId, repair);
-
-
-
-    return res.json({
-      reply: repair,
-      done: false,
-      sessionId,
-      slotId: prevBotSlotId,
-      conditionId: session.conditionId,
-      repaired: true,
-    });
-  }
   // =====================
 
   // store user answer + update memory

@@ -163,6 +163,23 @@ async function handleSend() {
 }
 
 sendBtn.addEventListener("click", handleSend);
-inputEl.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") handleSend();
+let isComposing = false;
+
+inputEl.addEventListener("compositionstart", () => {
+  isComposing = true;
 });
+
+inputEl.addEventListener("compositionend", () => {
+  isComposing = false;
+});
+
+inputEl.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+
+  // 中文输入法合成中：Enter 只是“上屏/选词”，不要发送
+  if (isComposing || e.isComposing || e.keyCode === 229) return;
+
+  e.preventDefault();
+  handleSend();
+});
+
