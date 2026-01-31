@@ -716,7 +716,6 @@ Context-sensitive constraint (IMPORTANT):
 
 You may use the example below ONLY when the user has clearly expressed distress
 or described why the issue is stressful.
-
 Example:
 "It is fine to feel that way, and I'm here to help you."
 

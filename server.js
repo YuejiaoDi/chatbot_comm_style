@@ -785,6 +785,44 @@ function pushAdviceHistory(session, botText) {
 }
 
 // =====================
+// ES prefix generator (2 sentences): comfort + acknowledge concern
+// =====================
+async function generateComfortPlusAcknowledge(userText) {
+  const messages = [
+    {
+      role: "system",
+      content:
+        "Write EXACTLY TWO sentences.\n" +
+        "Purpose: (1) a brief, gentle comfort sentence; (2) a sentence that acknowledges the user's concern as real/common/reasonable.\n\n" +
+        "Rules:\n" +
+        "- Sentence 1: soft comfort, 4–10 words. Examples: 'I understand.' / 'I hear you.' / 'That makes sense.'\n" +
+        "- Sentence 2: legitimize the concern as common/real/reasonable in similar situations, 8–18 words.\n" +
+        "- Do NOT give advice, steps, or solutions.\n" +
+        "- Do NOT ask questions.\n" +
+        "- Do NOT mention therapy, counseling, diagnosis, or hotlines.\n" +
+        "- Keep it neutral, not overly warm.\n" +
+        "- Output ONLY the two sentences, nothing else."
+    },
+    { role: "user", content: `User message:\n${String(userText || "").trim()}` }
+  ];
+
+  const payload = { model: "gpt-4o-mini", messages, temperature: 0.35 };
+  let reply = await callOpenAI(payload);
+
+  // keep only first two sentences, robust fallback
+  const sentences = (reply || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .match(/[^.!?]+[.!?]/g) || [];
+
+  const s1 = (sentences[0] || "I understand.").trim();
+  const s2 = (sentences[1] || "That’s a common concern in situations like this.").trim();
+
+  // Ensure exactly two sentences returned
+  return `${s1} ${s2}`.trim();
+}
+
+// =====================
 // 6) OpenAI call
 // =====================
 async function callOpenAI(payload) {
@@ -1269,49 +1307,42 @@ ${noRepeatBlock}
     }
   }
 
-  // =====================
-  // Type3 follow-up slots 5/6/7: SERVER adds EXACTLY ONE ES sentence
-  // =====================
+  // Type3 follow-up slots 5/6/7 // 
   if (type === "type3" && [5, 6, 7].includes(currentSlotId)) {
-    const picked = pickESForType3Followup(userText, session);
-    if (!session.memory) session.memory = {};
-    session.memory._type3ESPrefix = picked.es;
+  const es2 = await generateComfortPlusAcknowledge(userText);
+  if (!session.memory) session.memory = {};
+  session.memory._type3ESPrefix = es2;
 
-    const EXACT_END =
-      "I’m glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)";
+  const EXACT_END =
+    "I’m glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)";
 
-    // IMPORTANT: we do NOT globally forbid ES, because 1a/1b/1c and 2a/2b/2c
-    // require fixed sentences that can be emotional-support-like.
-    // Instead we instruct:
-    // - If rule 1x: output EXACT_END only.
-    // - If rule 2x: output only the fixed 2x pattern.
-    // - Otherwise (3/4/5/Fallback): do NOT output any ES sentence; server will inject one.
-    messages.splice(messages.length - 1, 0, {
-      role: "system",
-      content:
-        "TYPE3 FOLLOW-UP SERVER POLICY:\n" +
-        `- If you apply rule 1a/1b/1c, output EXACTLY this sentence and nothing else:\n"${EXACT_END}"\n` +
-        "- If you apply rule 2a/2b/2c (reject-all), output EXACTLY ONE of these starts and then the fixed question:\n" +
-        '"I\'m sorry to hear that. Could you tell me which parts you think should be revised?"\n' +
-        '"It’s usual to take some time to figure out what doesn’t quite fit. Could you tell me which parts you think should be revised?"\n' +
-        "- Otherwise (rules 3/4/5/Fallback), DO NOT output any emotional-support sentence at all. Start directly with the required content. The SERVER will add exactly one emotional-support sentence.",
-    });
-  }
+  messages.splice(messages.length - 1, 0, {
+    role: "system",
+    content:
+      "TYPE3 FOLLOW-UP SERVER POLICY:\n" +
+      `- If you apply rule 1a/1b/1c, output EXACTLY this sentence and nothing else:\n"${EXACT_END}"\n` +
+      "- If you apply rule 2a/2b/2c (reject-all), output EXACTLY ONE of these starts and then the fixed question:\n" +
+      '"I\'m sorry to hear that. Could you tell me which parts you think should be revised?"\n' +
+      '"It’s usual to take some time to figure out what doesn’t quite fit. Could you tell me which parts you think should be revised?"\n' +
+      "- Otherwise (rules 3/4/5/Fallback), DO NOT output any emotional-support sentence at all. Start directly with the required content. The SERVER will add exactly one emotional-support prefix.",
+  });
+}
+
 
   // =====================
 // Type4 follow-up slots 3/4/5: SERVER adds EXACTLY ONE ES sentence
 // (Use SAME selection standard as Type3 via pickESForType3Followup)
 // =====================
 if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
-  const picked = pickESForType3Followup(userText, session);
+  const es2 = await generateComfortPlusAcknowledge(userText);
   if (!session.memory) session.memory = {};
-  session.memory._type4ESPrefix = picked.es;
+  session.memory._type4ESPrefix = es2;
 
   messages.splice(messages.length - 1, 0, {
     role: "system",
     content:
       "TYPE4 FOLLOW-UP SERVER POLICY:\n" +
-      "- An emotional-support sentence will be added by the SERVER.\n" +
+      "- An emotional-support prefix (2 sentences) will be added by the SERVER.\n" +
       "- Therefore, you MUST NOT output any emotional-support sentence.\n" +
       "- Start directly with the required directive content.\n" +
       "- Your first sentence MUST start with an imperative verb (as required by the slot).\n",
@@ -1328,82 +1359,64 @@ if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
     let reply = await callOpenAI(payload);
 
     // ✅ Inject EXACTLY ONE ES sentence for Type3 slots 5/6/7 (GUARDED)
-    if (type === "type3" && [5, 6, 7].includes(currentSlotId)) {
-      let raw = String(reply || "").trim();
+if (type === "type3" && [5, 6, 7].includes(currentSlotId)) {
+  let raw = String(reply || "").trim();
 
-      const EXACT_END =
-        "I’m glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)";
+  const EXACT_END =
+    "I’m glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)";
 
-      // 1a/1b/1c exact ending sentence only -> DO NOT inject
-      if (raw === EXACT_END) {
-        reply = raw;
-      } else {
-        // 2a/2b/2c fixed pattern: model already contains exactly-one ES + fixed question
-        const isFixed2x =
-          /^(I'm sorry to hear that\.|It’s usual to take some time to figure out what doesn’t quite fit\.)\s+/i.test(
-            raw
-          ) && /\bwhich parts you think should be revised\?\s*$/i.test(raw);
+  // 1a/1b/1c exact ending sentence only -> DO NOT inject
+  if (raw === EXACT_END) {
+    reply = raw;
+  } else {
+    // 2a/2b/2c fixed pattern: model already contains exactly-one ES + fixed question
+    const isFixed2x =
+      /^(I'm sorry to hear that\.|It’s usual to take some time to figure out what doesn’t quite fit\.)\s+/i.test(raw) &&
+      /\bwhich parts you think should be revised\?\s*$/i.test(raw);
 
-        if (isFixed2x) {
-          reply = raw; // do not inject
-        } else {
-          const es = (session.memory && session.memory._type3ESPrefix) || ES_SENTENCES.understand;
+    if (isFixed2x) {
+      reply = raw; // do not inject
+    } else {
+      const es = (session.memory && session.memory._type3ESPrefix) || ES_SENTENCES.understand;
 
-          // strip any accidental ES that the model output at the beginning
-          const forbidden = Object.values(ES_SENTENCES).filter(Boolean);
-          for (const f of forbidden) {
-            const re = new RegExp(
-              "^" + f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?:[.!?])?\\s*",
-              "i"
-            );
-            raw = raw.replace(re, "");
-          }
+      // strip common accidental ES prefixes if the model mistakenly produced them
+      raw = raw
+        .replace(/^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you)\b[.!?]?\s*/i, "")
+        .replace(/^(it['’]s (a )?reasonable question)\b[.!?]?\s*/i, "")
+        .trim();
 
-          // also strip common accidental prefix
-          raw = raw.replace(/^I understand(?:[.!?])?\s*/i, "").trim();
-
-          reply = `${es} ${raw}`.trim();
-        }
-      }
-
-      if (session.memory) delete session.memory._type3ESPrefix;
+      reply = `${es} ${raw}`.trim();
     }
+  }
+
+  if (session.memory) delete session.memory._type3ESPrefix;
+}
+
 
     // ✅ Inject EXACTLY ONE ES sentence for Type4 slots 3/4/5 (GUARDED)
 if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
   let raw = String(reply || "").trim();
 
+  raw = raw
+    .replace(/^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you)\b[.!?]?\s*/i, "")
+    .replace(/^(it['’]s (a )?reasonable question)\b[.!?]?\s*/i, "")
+    .trim();
+
   // --- ending bypass: if model output is the exact ending, DO NOT inject ---
-  // Use a robust check to tolerate straight/curly apostrophes.
   const isType4Ending =
-    /^\s*I['’]m glad to hear that\.\s*You['’]ve done a good job thinking about your situation so far\.\s*I wish you all the best\.\s*\(This is the end of our conversation\.\)\s*$/i.test(
-      raw
-    ) ||
+    /^\s*I['’]m glad to hear that\.\s*You['’]ve done a good job thinking about your situation so far\.\s*I wish you all the best\.\s*\(This is the end of our conversation\.\)\s*$/i.test(raw) ||
     /^\s*It['’]s good to hear that\.\s*\(This is the end of our conversation\.\)\s*$/i.test(raw);
 
   if (isType4Ending) {
-    reply = raw; // dictionary 1a/1b/1c stays untouched
+    reply = raw;
   } else {
     const es = (session.memory && session.memory._type4ESPrefix) || ES_SENTENCES.understand;
-
-    // strip any accidental ES that the model output at the beginning
-    const forbidden = Object.values(ES_SENTENCES).filter(Boolean);
-    for (const f of forbidden) {
-      const re = new RegExp(
-        "^" + f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?:[.!?])?\\s*",
-        "i"
-      );
-      raw = raw.replace(re, "");
-    }
-
-    // extra strip for common accidental prefix
-    raw = raw.replace(/^I understand(?:[.!?])?\s*/i, "").trim();
-
     reply = `${es} ${raw}`.trim();
   }
 
   if (session.memory) delete session.memory._type4ESPrefix;
 }
+
 
     // NEW: if this is Slot 1, capture the keyword/topic used in Slot 1 for Slot 2 reuse
     if (currentSlotId === 1) {
