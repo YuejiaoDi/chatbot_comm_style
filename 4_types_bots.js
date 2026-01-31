@@ -620,9 +620,8 @@ Hard constraints:
   },
 
   // =========================================================
-// Type 3: Collaborative tone & Emotional Support
-// Slots 5-7: emotional-support sentences come from an "emo sentence bank"
-// =========================================================
+// Type 3: Collaborative tone & Emotional Support //
+
 collaborative_ES: {
   id: "collaborative_ES",
   factors: {

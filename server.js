@@ -792,16 +792,21 @@ async function generateComfortPlusAcknowledge(userText) {
     {
       role: "system",
       content:
-        "Write EXACTLY TWO sentences.\n" +
-        "Purpose: (1) a brief, gentle comfort sentence; (2) a sentence that acknowledges the user's concern as real/common/reasonable.\n\n" +
-        "Rules:\n" +
-        "- Sentence 1: soft comfort, 4–10 words. Examples: 'I understand.' / 'I hear you.' / 'That makes sense.'\n" +
-        "- Sentence 2: legitimize the concern as common/real/reasonable in similar situations, 8–18 words.\n" +
-        "- Do NOT give advice, steps, or solutions.\n" +
-        "- Do NOT ask questions.\n" +
-        "- Do NOT mention therapy, counseling, diagnosis, or hotlines.\n" +
-        "- Keep it neutral, not overly warm.\n" +
-        "- Output ONLY the two sentences, nothing else."
+  "Write EXACTLY TWO sentences.\n" +
+  "Purpose: (1) a brief, gentle comfort sentence; (2) a sentence that acknowledges the user's concern as real/common/reasonable.\n\n" +
+  "Rules:\n" +
+  "- Sentence 1: soft comfort, 4–10 words.\n" +
+  "- Sentence 2: legitimize the concern as common/real/reasonable in similar situations, 8–18 words.\n\n" +
+  "Anti-repetition rules (VERY IMPORTANT):\n" +
+  "- Do NOT use these exact openers in Sentence 1: 'I hear you.' 'I understand.' 'That makes sense.'\n" +
+  "- Sentence 1 must feel different across turns (vary wording).\n\n" +
+  "Other constraints:\n" +
+  "- Do NOT give advice, steps, or solutions.\n" +
+  "- Do NOT ask questions.\n" +
+  "- Do NOT mention therapy, counseling, diagnosis, or hotlines.\n" +
+  "- Keep it neutral, not overly warm.\n" +
+  "- Output ONLY the two sentences, nothing else."
+      
     },
     { role: "user", content: `User message:\n${String(userText || "").trim()}` }
   ];
