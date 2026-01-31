@@ -792,39 +792,70 @@ async function generateComfortPlusAcknowledge(userText) {
     {
       role: "system",
       content:
-  "Write EXACTLY TWO sentences.\n" +
-  "Goal:\n" +
-  "- Sentence 1: a brief comfort/soothing sentence.\n" +
-  "- Sentence 2: acknowledge the user's concern as valid/real/reasonable (can be common, but do NOT always say 'Many people...').\n\n" +
-  "Hard rules:\n" +
-  "- Output ONLY two sentences, nothing else.\n" +
-  "- Do NOT give advice, steps, solutions, or examples.\n" +
-  "- Do NOT ask questions.\n" +
-  "- Do NOT mention therapy/counseling/diagnosis/hotlines.\n\n" +
-  "Anti-repetition rules (STRICT):\n" +
-  "- Vary sentence openings. You MAY use 'It's okay...' sometimes, but NOT every time.\n" +
-  "- Do NOT use both of these in the same prefix: 'It's okay to feel...' + 'Many people...'.\n" +
-  "- Avoid starting Sentence 2 with 'Many people...' or 'It’s common...' unless it truly fits.\n" +
-  "- Avoid 'It might be helpful...' (sounds like advice).\n" +
-  "- Keep it natural and non-formulaic."
-      
+        "Write EXACTLY TWO sentences.\n" +
+        "Goal:\n" +
+        "- Sentence 1: a brief comfort/soothing sentence.\n" +
+        "- Sentence 2: acknowledge the user's concern as valid/real/reasonable (can be common, but do NOT always say 'Many people...').\n\n" +
+        "Hard rules:\n" +
+        "- Output ONLY two sentences, nothing else.\n" +
+        "- Do NOT give advice, steps, solutions, or examples.\n" +
+        "- Do NOT ask questions.\n" +
+        "- Do NOT mention therapy/counseling/diagnosis/hotlines.\n\n" +
+        "Anti-repetition rules (STRICT):\n" +
+        "- Vary sentence openings. You MAY use 'It's okay...' sometimes, but NOT every time.\n" +
+        "- Do NOT use both of these in the same prefix: 'It's okay to feel...' + 'Many people...'.\n" +
+        "- Avoid starting Sentence 2 with 'Many people...' or 'It’s common...' unless it truly fits.\n" +
+        "- Avoid 'It might be helpful...' (sounds like advice).\n" +
+        "- Keep it natural and non-formulaic."
     },
     { role: "user", content: `User message:\n${String(userText || "").trim()}` }
   ];
 
   const payload = { model: "gpt-4o-mini", messages, temperature: 0.7 };
-  let reply = await callOpenAI(payload);
+  const reply = await callOpenAI(payload);
 
-  // keep only first two sentences, robust fallback
-  const sentences = (reply || "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .match(/[^.!?]+[.!?]/g) || [];
+  const sentences =
+    (reply || "").replace(/\s+/g, " ").trim().match(/[^.!?]+[.!?]/g) || [];
 
   const s1 = (sentences[0] || "I understand.").trim();
-  const s2 = (sentences[1] || "That’s a common concern in situations like this.").trim();
+  const s2 = (sentences[1] || "That’s a real concern in situations like this.").trim();
 
-  // Ensure exactly two sentences returned
+  return `${s1} ${s2}`.trim();
+}
+
+
+// =====================
+// ES prefix generator (2 sentences): directive ES (firm + standard)
+// =====================
+async function generateDirectiveES(userText) {
+  const messages = [
+    {
+      role: "system",
+      content:
+        "Write EXACTLY TWO sentences.\n" +
+        "Goal:\n" +
+        "- Sentence 1: acknowledge the user may feel resistance/difficulty.\n" +
+        "- Sentence 2: restate the expected behavior/standard in firm language.\n\n" +
+        "Rules:\n" +
+        "- Do NOT validate the user's preference or desire.\n" +
+        "- Do NOT say the user's choice is reasonable, fine, or understandable.\n" +
+        "- Use firm, task-oriented language.\n" +
+        "- Do NOT ask questions.\n" +
+        "- Do NOT offer options.\n" +
+        "- Output ONLY two sentences, nothing else."
+    },
+    { role: "user", content: `User message:\n${String(userText || "").trim()}` }
+  ];
+
+  const payload = { model: "gpt-4o-mini", messages, temperature: 0.4 };
+  const reply = await callOpenAI(payload);
+
+  const sentences =
+    (reply || "").replace(/\s+/g, " ").trim().match(/[^.!?]+[.!?]/g) || [];
+
+  const s1 = (sentences[0] || "I hear your hesitation.").trim();
+  const s2 = (sentences[1] || "You still need to follow the steps as stated.").trim();
+
   return `${s1} ${s2}`.trim();
 }
 
@@ -1315,7 +1346,16 @@ ${noRepeatBlock}
 
   // Type3 follow-up slots 5/6/7 // 
   if (type === "type3" && [5, 6, 7].includes(currentSlotId)) {
-  const es2 = await generateComfortPlusAcknowledge(userText);
+  let es2;
+
+if (type === "type3") {
+  // collaborative + ES
+  es2 = await generateComfortPlusAcknowledge(userText);
+} else if (type === "type4") {
+  // directive + ES
+  es2 = await generateDirectiveES(userText);
+}
+
   if (!session.memory) session.memory = {};
   session.memory._type3ESPrefix = es2;
 
