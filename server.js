@@ -793,25 +793,26 @@ async function generateComfortPlusAcknowledge(userText) {
       role: "system",
       content:
   "Write EXACTLY TWO sentences.\n" +
-  "Purpose: (1) a brief, gentle comfort sentence; (2) a sentence that acknowledges the user's concern as real/common/reasonable.\n\n" +
-  "Rules:\n" +
-  "- Sentence 1: soft comfort, 4–10 words.\n" +
-  "- Sentence 2: legitimize the concern as common/real/reasonable in similar situations, 8–18 words.\n\n" +
-  "Anti-repetition rules (VERY IMPORTANT):\n" +
-  "- Do NOT use these exact openers in Sentence 1: 'I hear you.' 'I understand.' 'That makes sense.'\n" +
-  "- Sentence 1 must feel different across turns (vary wording).\n\n" +
-  "Other constraints:\n" +
-  "- Do NOT give advice, steps, or solutions.\n" +
+  "Goal:\n" +
+  "- Sentence 1: a brief comfort/soothing sentence.\n" +
+  "- Sentence 2: acknowledge the user's concern as valid/real/reasonable (can be common, but do NOT always say 'Many people...').\n\n" +
+  "Hard rules:\n" +
+  "- Output ONLY two sentences, nothing else.\n" +
+  "- Do NOT give advice, steps, solutions, or examples.\n" +
   "- Do NOT ask questions.\n" +
-  "- Do NOT mention therapy, counseling, diagnosis, or hotlines.\n" +
-  "- Keep it neutral, not overly warm.\n" +
-  "- Output ONLY the two sentences, nothing else."
+  "- Do NOT mention therapy/counseling/diagnosis/hotlines.\n\n" +
+  "Anti-repetition rules (STRICT):\n" +
+  "- Vary sentence openings. You MAY use 'It's okay...' sometimes, but NOT every time.\n" +
+  "- Do NOT use both of these in the same prefix: 'It's okay to feel...' + 'Many people...'.\n" +
+  "- Avoid starting Sentence 2 with 'Many people...' or 'It’s common...' unless it truly fits.\n" +
+  "- Avoid 'It might be helpful...' (sounds like advice).\n" +
+  "- Keep it natural and non-formulaic."
       
     },
     { role: "user", content: `User message:\n${String(userText || "").trim()}` }
   ];
 
-  const payload = { model: "gpt-4o-mini", messages, temperature: 0.35 };
+  const payload = { model: "gpt-4o-mini", messages, temperature: 0.7 };
   let reply = await callOpenAI(payload);
 
   // keep only first two sentences, robust fallback
