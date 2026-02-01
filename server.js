@@ -898,6 +898,36 @@ async function generateComfortOnly(userText) {
 }
 
 // =====================
+// ES prefix generator (1 sentence): ACKNOWLEDGE ONLY (no comfort)
+// For Type4 follow-ups
+// =====================
+async function generateDirectiveES(userText) {
+  const messages = [
+    {
+      role: "system",
+      content:
+        "Write EXACTLY one short sentence.\n" +
+        "Goal:\n" +
+        "- Acknowledge the user's concern as valid/real/reasonable.\n" +
+        "Rules:\n" +
+        "- Output ONLY one sentence, nothing else.\n" +
+        "- Do NOT include comfort/soothing language (e.g., 'It's okay', 'I'm sorry', 'I hear you').\n" +
+        "- Do NOT give advice, steps, solutions, or examples.\n" +
+        "- Do NOT ask questions.\n" +
+        "- Do NOT mention therapy/counseling/diagnosis/hotlines.\n" +
+        "- Keep it natural and non-formulaic; vary sentence openings."
+    },
+    { role: "user", content: `User message:\n${String(userText || "").trim()}` }
+  ];
+
+  const payload = { model: "gpt-4o-mini", messages, temperature: 0.5 };
+  const reply = await callOpenAI(payload);
+
+  const m = (reply || "").replace(/\s+/g, " ").trim().match(/[^.!?]+[.!?]/);
+  return (m?.[0] || "That’s a valid concern here.").trim();
+}
+
+// =====================
 // 6) OpenAI call
 // =====================
 async function callOpenAI(payload) {
