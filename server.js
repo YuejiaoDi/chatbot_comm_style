@@ -825,36 +825,49 @@ async function generateComfortPlusAcknowledge(userText) {
 
 
 // =====================
-// ES prefix generator (1 sentences): directive ES (acknowledge only)
+// ES prefix generator (1 sentence): comfort + acknowledge (compressed)
 // =====================
-async function generateDirectiveES(userText) {
+async function generateComfortAcknowledgeOneSentence(userText) {
   const messages = [
     {
       role: "system",
       content:
-        "Write EXACTLY ONE short sentence.\n" +
-        "Goal: neutral acknowledgement of the user's constraint/resistance.\n\n" +
+        "Write EXACTLY one short sentence.\n" +
+        "Goal:\n" +
+        "- Combine brief comfort/soothing AND acknowledgement of the user's concern into ONE sentence.\n\n" +
         "Hard rules:\n" +
-        "- Output ONLY one sentence.\n" +
-        "- Do NOT comfort/soothe (no 'okay', 'don't worry', 'you'll be fine', 'beautiful', 'promise').\n" +
-        "- Do NOT encourage or motivate.\n" +
-        "- Do NOT give advice or steps.\n" +
+        "- Output ONLY one sentence, nothing else.\n" +
+        "- The sentence should acknowledge the concern as valid/real/reasonable or common.\n" +
+        "- Do NOT give advice, steps, solutions, or examples.\n" +
         "- Do NOT ask questions.\n" +
-        "- Keep it factual and flat.\n\n" +
-        "Allowed style examples (do not copy exactly every time):\n" +
-        "- 'Noted.'\n" +
-        "- 'Understood.'\n" +
-        "- 'That constraint is noted.'\n" +
-        "- 'That difficulty is noted.'"
+        "- Do NOT mention therapy/counseling/diagnosis/hotlines.\n\n" +
+        "Anti-repetition rules (STRICT):\n" +
+        "- Vary sentence openings. You MAY use 'It's okay...' sometimes, but NOT every time.\n" +
+        "- Avoid 'Many people...' or 'It’s common...' unless it truly fits.\n" +
+        "- Avoid 'It might be helpful...' (sounds like advice).\n" +
+        "- Keep it natural and non-formulaic.\n\n" +
+        "Good examples (do not copy exactly every time):\n" +
+        "- 'It’s okay to feel this way, and that’s a real concern in situations like this.'\n" +
+        "- 'This can feel heavy at times, and your concern here is valid.'\n" +
+        "- 'It’s understandable to feel this way given the situation.'\n" +
+        "- 'That feeling is real, and it’s a reasonable concern to have.'"
     },
     { role: "user", content: `User message:\n${String(userText || "").trim()}` }
   ];
 
-  const payload = { model: "gpt-4o-mini", messages, temperature: 0.2 };
+  const payload = { model: "gpt-4o-mini", messages, temperature: 0.7 };
   const reply = await callOpenAI(payload);
-  const m = (reply || "").replace(/\s+/g, " ").trim().match(/[^.!?]+[.!?]/);
-  return (m?.[0] || "Noted.").trim();
+
+  const sentence =
+    (reply || "").replace(/\s+/g, " ").trim().match(/[^.!?]+[.!?]/);
+
+  // fallback: SAME emotional tier as your 2-sentence version
+  return (
+    sentence?.[0] ||
+    "It’s okay to feel this way, and that’s a real concern in situations like this."
+  ).trim();
 }
+
 
 // =====================
 // ES prefix generator (1 sentence): comfort ONLY (no acknowledge)
