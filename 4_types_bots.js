@@ -833,7 +833,7 @@ Decision rules:
 1a) If the user responds PURELY positively to one OR more options 
 AND does NOT mention any concerns, limitations, difficulties, or rejection of any other option:
 - Reply EXACTLY with the single sentence below (no extra words before or after):
-"I’m glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)"
+"I’m glad to hear that. You’ve done a good job thinking about your situation so far! I wish you all the best. (This is the end of our conversation.)"
 
 Important:
 - If the user expresses BOTH a positive evaluation of one option AND any concern, limitation, difficulty, or rejection of another option, 
@@ -925,7 +925,7 @@ Decision rules:
 1b) If the user responds PURELY positively to one OR more options 
 AND does NOT mention any concerns, limitations, difficulties, or rejection of any other option:
 - Reply EXACTLY with the single sentence below (no extra words before or after):
-"I’m glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)"
+"I’m glad to hear that. You’ve done a good job thinking about your situation so far! I wish you all the best. (This is the end of our conversation.)"
 
 Important:
 - If the user expresses BOTH a positive evaluation of one option AND any concern, limitation, difficulty, or rejection of another option, 
@@ -1016,7 +1016,7 @@ Decision rules:
 1c) If the user responds PURELY positively to one OR more options 
 AND does NOT mention any concerns, limitations, difficulties, or rejection of any other option:
 - Reply EXACTLY with the single sentence below (no extra words before or after):
-"I’m glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)"
+"I’m glad to hear that. You’ve done a good job thinking about your situation so far! I wish you all the best. (This is the end of our conversation.)"
 
 Important:
 - If the user expresses BOTH a positive evaluation of one option AND any concern, limitation, difficulty, or rejection of another option, 
@@ -1182,7 +1182,7 @@ Decision rules:
 1a) If the user responds PURELY positively to one OR more options 
 AND does NOT mention any concerns, limitations, difficulties, or rejection of any other option:
 - Reply EXACTLY:
-"I'm glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)"
+"I'm glad to hear that. You’ve done a good job thinking about your situation so far! I wish you all the best. (This is the end of our conversation.)"
 
 Important:
 - If the user expresses BOTH a positive evaluation of one option AND any concern, limitation, difficulty, or rejection of another option, 
@@ -1253,7 +1253,7 @@ EMOTIONAL SUPPORT POLICY (SERVER-INJECTED):
 1b) If the user responds PURELY positively to one OR more options 
 AND does NOT mention any concerns, limitations, difficulties, or rejection of any other option:
 - Reply EXACTLY:
-"I'm glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)"
+"I'm glad to hear that. You’ve done a good job thinking about your situation so far! I wish you all the best. (This is the end of our conversation.)"
 Important:
 - If the user expresses BOTH a positive evaluation of one option AND any concern, limitation, difficulty, or rejection of another option, 
 DO NOT treat this as a purely positive response.
@@ -1324,7 +1324,7 @@ EMOTIONAL SUPPORT POLICY (SERVER-INJECTED):
 1c) If the user responds PURELY positively to one OR more options 
 AND does NOT mention any concerns, limitations, difficulties, or rejection of any other option:
 - Reply EXACTLY:
-"I'm glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)"
+"I'm glad to hear that. You’ve done a good job thinking about your situation so far! I wish you all the best. (This is the end of our conversation.)"
 Important:
 - If the user expresses BOTH a positive evaluation of one option AND any concern, limitation, difficulty, or rejection of another option, 
 DO NOT treat this as a purely positive response.

@@ -792,7 +792,7 @@ async function generateComfortPlusAcknowledge(userText) {
     {
       role: "system",
       content:
-        "Write EXACTLY TWO sentences.\n" +
+        "Write EXACTLY TWO short sentences.\n" +
         "Goal:\n" +
         "- Sentence 1: a brief comfort/soothing sentence.\n" +
         "- Sentence 2: acknowledge the user's concern as valid/real/reasonable (can be common, but do NOT always say 'Many people...').\n\n" +
@@ -832,10 +832,9 @@ async function generateDirectiveES(userText) {
     {
       role: "system",
       content:
-        "Write EXACTLY TWO sentences.\n" +
+        "Write EXACTLY one sentences.\n" +
         "Goal:\n" +
         "- Sentence 1: acknowledge the user may feel resistance/difficulty.\n" +
-        "- Sentence 2: restate the expected behavior/standard in firm language.\n\n" +
         "Rules:\n" +
         "- Do NOT validate the user's preference or desire.\n" +
         "- Do NOT say the user's choice is reasonable, fine, or understandable.\n" +
@@ -847,7 +846,7 @@ async function generateDirectiveES(userText) {
     { role: "user", content: `User message:\n${String(userText || "").trim()}` }
   ];
 
-  const payload = { model: "gpt-4o-mini", messages, temperature: 0.4 };
+  const payload = { model: "gpt-4o-mini", messages, temperature: 0.5 };
   const reply = await callOpenAI(payload);
 
   const sentences =
@@ -857,6 +856,34 @@ async function generateDirectiveES(userText) {
   const s2 = (sentences[1] || "You still need to follow the steps as stated.").trim();
 
   return `${s1} ${s2}`.trim();
+}
+
+// =====================
+// ES prefix generator (1 sentence): comfort ONLY (no acknowledge)
+// =====================
+async function generateComfortOnly(userText) {
+  const messages = [
+    {
+      role: "system",
+      content:
+        "Write EXACTLY ONE sentence.\n" +
+        "Goal:\n" +
+        "- Provide a brief comforting or calming sentence.\n\n" +
+        "Rules:\n" +
+        "- Do NOT acknowledge/validate the user's concern (no 'reasonable/understandable/valid').\n" +
+        "- Do NOT give advice or instructions.\n" +
+        "- Do NOT ask questions.\n" +
+        "- Avoid starting with 'It's okay...' every time.\n" +
+        "- Output ONLY one sentence, nothing else."
+    },
+    { role: "user", content: `User message:\n${String(userText || "").trim()}` }
+  ];
+
+  const payload = { model: "gpt-4o-mini", messages, temperature: 0.6 };
+  const reply = await callOpenAI(payload);
+
+  const m = (reply || "").replace(/\s+/g, " ").trim().match(/[^.!?]+[.!?]/);
+  return (m?.[0] || "I hear you.").trim();
 }
 
 // =====================
@@ -1360,7 +1387,7 @@ if (type === "type3") {
   session.memory._type3ESPrefix = es2;
 
   const EXACT_END =
-    "I’m glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)";
+    "I’m glad to hear that. You’ve done a good job thinking about your situation so far! I wish you all the best. (This is the end of our conversation.)";
 
   messages.splice(messages.length - 1, 0, {
     role: "system",
@@ -1450,8 +1477,7 @@ if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
 
   // --- ending bypass: if model output is the exact ending, DO NOT inject ---
   const isType4Ending =
-    /^\s*I['’]m glad to hear that\.\s*You['’]ve done a good job thinking about your situation so far\.\s*I wish you all the best\.\s*\(This is the end of our conversation\.\)\s*$/i.test(raw) ||
-    /^\s*It['’]s good to hear that\.\s*\(This is the end of our conversation\.\)\s*$/i.test(raw);
+  /^\s*I['’]m glad to hear that\.\s*You['’]ve done a good job thinking about your situation so far\.\s*I wish you all the best\.\s*\(This is the end of our conversation\.\)\s*$/i.test(raw);
 
   if (isType4Ending) {
     reply = raw;
