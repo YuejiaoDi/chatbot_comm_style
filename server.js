@@ -832,24 +832,28 @@ async function generateDirectiveES(userText) {
     {
       role: "system",
       content:
-        "Write EXACTLY one sentences.\n" +
-        "Goal:\n" +
-        " acknowledge the user may feel resistance/difficulty.\n" +
-        "Rules:\n" +
-        "- Do NOT comfort/soothe (avoid 'It's okay', 'Don't worry', 'You'll be fine').\n" +
-        "- Do NOT give advice, steps, instructions, or examples.\n" +
+        "Write EXACTLY ONE short sentence.\n" +
+        "Goal: neutral acknowledgement of the user's constraint/resistance.\n\n" +
+        "Hard rules:\n" +
+        "- Output ONLY one sentence.\n" +
+        "- Do NOT comfort/soothe (no 'okay', 'don't worry', 'you'll be fine', 'beautiful', 'promise').\n" +
+        "- Do NOT encourage or motivate.\n" +
+        "- Do NOT give advice or steps.\n" +
         "- Do NOT ask questions.\n" +
-        "- Avoid starting with the same phrase every time.\n" +
-        "- Output ONLY one sentence, nothing else."
+        "- Keep it factual and flat.\n\n" +
+        "Allowed style examples (do not copy exactly every time):\n" +
+        "- 'Noted.'\n" +
+        "- 'Understood.'\n" +
+        "- 'That constraint is noted.'\n" +
+        "- 'That difficulty is noted.'"
     },
     { role: "user", content: `User message:\n${String(userText || "").trim()}` }
   ];
 
-  const payload = { model: "gpt-4o-mini", messages, temperature: 0.5 };
+  const payload = { model: "gpt-4o-mini", messages, temperature: 0.2 };
   const reply = await callOpenAI(payload);
-
   const m = (reply || "").replace(/\s+/g, " ").trim().match(/[^.!?]+[.!?]/);
-  return (m?.[0] || "That concern is valid.").trim();
+  return (m?.[0] || "Noted.").trim();
 }
 
 // =====================

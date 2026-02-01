@@ -1163,6 +1163,7 @@ LEXICAL CONSTRAINT (STRICT):
   "consider", "might", "could", "may", "suggest", "recommended".
 - You MUST NOT start a sentence with "Consider" or "You might".
 - Your response MUST start with an imperative verb (e.g., "Seek", "Use", "Set", "Contact", "Follow").
+- You MUST do not give explaination. 
 - If your output contains any forbidden word, it is invalid.
 
 General handling rules (apply to all cases below):
@@ -1173,7 +1174,6 @@ General handling rules (apply to all cases below):
 
 EMOTIONAL SUPPORT POLICY (SERVER-INJECTED):
 - Do NOT output any emotional-support sentence.
-- The SERVER will add exactly ONE emotional-support sentence before your text.
 - Start directly with the directive content required by the selected decision rule.
 - Your first sentence (that you output) MUST start with an imperative verb as required by the lexical constraint.
 - If an EXACT reply is required by a rule (e.g., the ending sentence), output it exactly and nothing else.
@@ -1234,6 +1234,7 @@ LEXICAL CONSTRAINT (STRICT):
 - You MUST NOT use any of the following words or phrases anywhere in your response:
   "consider", "might", "could", "may", "suggest", "recommended".
 - You MUST NOT start a sentence with "Consider" or "You might".
+- You MUST do not give explaination. 
 - Your response MUST start with an imperative verb (e.g., "Seek", "Use", "Set", "Contact", "Follow").
 - If your output contains any forbidden word, it is invalid.
 
@@ -1245,7 +1246,6 @@ General handling rules (apply to all cases below):
 
 EMOTIONAL SUPPORT POLICY (SERVER-INJECTED):
 - Do NOT output any emotional-support sentence.
-- The SERVER will add exactly ONE emotional-support sentence before your text.
 - Start directly with the directive content required by the selected decision rule.
 - Your first sentence (that you output) MUST start with an imperative verb as required by the lexical constraint.
 - If an EXACT reply is required by a rule (e.g., the ending sentence), output it exactly and nothing else.
@@ -1306,6 +1306,7 @@ LEXICAL CONSTRAINT (STRICT):
   "consider", "might", "could", "may", "suggest", "recommended".
 - You MUST NOT start a sentence with "Consider" or "You might".
 - Your response MUST start with an imperative verb (e.g., "Seek", "Use", "Set", "Contact", "Follow").
+- You MUST do not give explaination. 
 - If your output contains any forbidden word, it is invalid.
 
 General handling rules (apply to all cases below):
@@ -1316,7 +1317,6 @@ General handling rules (apply to all cases below):
 
 EMOTIONAL SUPPORT POLICY (SERVER-INJECTED):
 - Do NOT output any emotional-support sentence.
-- The SERVER will add exactly ONE emotional-support sentence before your text.
 - Start directly with the directive content required by the selected decision rule.
 - Your first sentence (that you output) MUST start with an imperative verb as required by the lexical constraint.
 - If an EXACT reply is required by a rule (e.g., the ending sentence), output it exactly and nothing else.
