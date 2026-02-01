@@ -792,7 +792,7 @@ async function generateComfortPlusAcknowledge(userText) {
     {
       role: "system",
       content:
-        "Write EXACTLY TWO short sentences.\n" +
+        "Write EXACTLY two short sentences.\n" +
         "Goal:\n" +
         "- Sentence 1: a brief comfort/soothing sentence.\n" +
         "- Sentence 2: acknowledge the user's concern as valid/real/reasonable (can be common, but do NOT always say 'Many people...').\n\n" +
@@ -825,7 +825,7 @@ async function generateComfortPlusAcknowledge(userText) {
 
 
 // =====================
-// ES prefix generator (2 sentences): directive ES (firm + standard)
+// ES prefix generator (1 sentences): directive ES (acknowledge only)
 // =====================
 async function generateDirectiveES(userText) {
   const messages = [
@@ -834,14 +834,13 @@ async function generateDirectiveES(userText) {
       content:
         "Write EXACTLY one sentences.\n" +
         "Goal:\n" +
-        "- Sentence 1: acknowledge the user may feel resistance/difficulty.\n" +
+        " acknowledge the user may feel resistance/difficulty.\n" +
         "Rules:\n" +
-        "- Do NOT validate the user's preference or desire.\n" +
-        "- Do NOT say the user's choice is reasonable, fine, or understandable.\n" +
-        "- Use firm, task-oriented language.\n" +
+        "- Do NOT comfort/soothe (avoid 'It's okay', 'Don't worry', 'You'll be fine').\n" +
+        "- Do NOT give advice, steps, instructions, or examples.\n" +
         "- Do NOT ask questions.\n" +
-        "- Do NOT offer options.\n" +
-        "- Output ONLY two sentences, nothing else."
+        "- Avoid starting with the same phrase every time.\n" +
+        "- Output ONLY one sentence, nothing else."
     },
     { role: "user", content: `User message:\n${String(userText || "").trim()}` }
   ];
@@ -849,13 +848,8 @@ async function generateDirectiveES(userText) {
   const payload = { model: "gpt-4o-mini", messages, temperature: 0.5 };
   const reply = await callOpenAI(payload);
 
-  const sentences =
-    (reply || "").replace(/\s+/g, " ").trim().match(/[^.!?]+[.!?]/g) || [];
-
-  const s1 = (sentences[0] || "I hear your hesitation.").trim();
-  const s2 = (sentences[1] || "You still need to follow the steps as stated.").trim();
-
-  return `${s1} ${s2}`.trim();
+  const m = (reply || "").replace(/\s+/g, " ").trim().match(/[^.!?]+[.!?]/);
+  return (m?.[0] || "That concern is valid.").trim();
 }
 
 // =====================
@@ -984,6 +978,9 @@ app.post("/chat", async (req, res) => {
   }
 
   const type = condition?.factors?.type; // 只能出现一次
+
+  if (!session.memory) session.memory = {};
+if (typeof session.memory._ackCount !== "number") session.memory._ackCount = 0;
 
   // ---- HARD STOP states ----
   if (session.crisis) {
@@ -1373,17 +1370,16 @@ ${noRepeatBlock}
 
   // Type3 follow-up slots 5/6/7 // 
   if (type === "type3" && [5, 6, 7].includes(currentSlotId)) {
-  let es2;
+  // ack limit shared across type3+type4
+  const ackUsed = session.memory._ackCount < 2;
 
-if (type === "type3") {
-  // collaborative + ES
-  es2 = await generateComfortPlusAcknowledge(userText);
-} else if (type === "type4") {
-  // directive + ES
-  es2 = await generateDirectiveES(userText);
-}
+  // type3: want comfort+ack for the first 2 times, then comfort-only
+  const es2 = ackUsed
+    ? await generateComfortPlusAcknowledge(userText) // 2 sentences
+    : await generateComfortOnly(userText);           // 1 sentence
 
-  if (!session.memory) session.memory = {};
+  if (ackUsed) session.memory._ackCount += 1;
+
   session.memory._type3ESPrefix = es2;
 
   const EXACT_END =
@@ -1407,20 +1403,28 @@ if (type === "type3") {
 // (Use SAME selection standard as Type3 via pickESForType3Followup)
 // =====================
 if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
-  const es2 = await generateComfortPlusAcknowledge(userText);
-  if (!session.memory) session.memory = {};
+  const ackUsed = session.memory._ackCount < 2;
+
+  // type4: first 2 times = acknowledge-only (1 sentence), then comfort-only (1 sentence)
+  const es2 = ackUsed
+    ? await generateDirectiveES(userText)   // 1 sentence acknowledge
+    : await generateComfortOnly(userText); // 1 sentence comfort
+
+  if (ackUsed) session.memory._ackCount += 1;
+
   session.memory._type4ESPrefix = es2;
 
   messages.splice(messages.length - 1, 0, {
     role: "system",
     content:
       "TYPE4 FOLLOW-UP SERVER POLICY:\n" +
-      "- An emotional-support prefix (2 sentences) will be added by the SERVER.\n" +
-      "- Therefore, you MUST NOT output any emotional-support sentence.\n" +
-      "- Start directly with the required directive content.\n" +
-      "- Your first sentence MUST start with an imperative verb (as required by the slot).\n",
+  "- An emotional-support prefix (1 sentence) will be added by the SERVER.\n" +
+  "- Therefore, you MUST NOT output ANY emotional-support language (no comfort, no validation, no empathy phrases like 'I understand', 'That makes sense').\n" +
+  "- Start directly with the required directive content.\n" +
+  "- Your first sentence MUST start with an imperative verb (as required by the slot).\n",
   });
 }
+
 
   try {
     const payload = {
