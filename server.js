@@ -105,7 +105,8 @@ const DEFINITIONS = {
     "<<DEFINITION: focus on shared problem solving and co-construction on the decision-making>>",
   directive:
     "<<DEFINITION:focus on instructive, prescriptive, authoritative, and dominant language that tells participants what to do.  >>",
-  emotionalSupport: "<<DEFINITION: showing care, concern, and interest in conversations>>",
+  emotionalSupport:
+    "<<DEFINITION: showing care, concern, and interest in conversations>>",
   noEmotionalSupport: "<<DEFINITION: no emotional support language>>",
 };
 
@@ -126,10 +127,7 @@ function getSessionId(req) {
   const b = req.body || {};
 
   const sid =
-    b.sessionId ||
-    b.responseId ||
-    req.query.sessionId ||
-    req.query.responseId;
+    b.sessionId || b.responseId || req.query.sessionId || req.query.responseId;
 
   console.log("Resolved sessionId:", sid);
 
@@ -137,114 +135,14 @@ function getSessionId(req) {
 }
 
 // =====================
-// ES sentences (Type3 follow-ups only)
+// ES sentences (fallback only)
 // =====================
 const ES_SENTENCES = {
-  worried: "It's understandable to feel worried about this situation.",
   understand: "I understand.",
-  timeToFigure: "It’s usual to take some time to figure out what doesn’t quite fit.",
-  makesSense: "That makes sense.",
-  concern: "I understand your concern.",
-  reasonableSingle: "It's a reasonable question.",
-  reasonableMulti: "These are reasonable questions.",
 };
 
 function normalize(s) {
-  return String(s || "")
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-// Detect follow-up intent by pragmatic function (NOT by grammar form)
-function pickESForType3Followup(userText, session) {
-  const raw = String(userText || "").trim();
-  const t = normalize(raw);
-
-  // --- helpers ---
-  const qMarks = (raw.match(/\?/g) || []).length;
-
-  // A) Directive elaboration requests: user is directing expansion of an option
-  // e.g., "tell me more about the second one", "give an example for option A"
-  const isDirectiveElaboration =
-    /\b(tell\s+me\s+more|more\s+details?|more\s+information|expand\s+on|elaborate\s+on|go\s+deeper|give\s+(me\s+)?(an\s+)?example|examples?)\b/i.test(
-      t
-    );
-
-  // B) Need/constraint/preference (you already extract these into memory, but we also detect directly)
-  const hasNeedOrConstraint =
-    /\b(my\s+real\s+need\s+is|what\s+i\s+really\s+need\s+is|i\s+need|i\s+want|i\s+prefer|i\s+don'?t\s+want|i\s+do\s+not\s+want)\b/i.test(
-      t
-    ) ||
-    !!extractUserNeed(raw) ||
-    !!extractUserPreference(raw);
-
-  // C) Inability / difficulty / "how to do it" (can be declarative OR interrogative)
-  const hasStrongInability =
-    /\b(i\s+can'?t|i\s+cannot|doesn'?t\s+work|won'?t\s+work|impossible|no\s+way|i\s+have\s+no\s+idea|i\s+don'?t\s+know\s+how)\b/i.test(
-      t
-    );
-
-  const hasMildDifficulty =
-    /\b(not\s+sure\s+how|not\s+sure|unsure|confused|stuck|hard\s+to)\b/i.test(t);
-
-  // D) Questioning stance (true question): asking for evaluation/clarification, not directing expansion
-  // We EXCLUDE directive elaboration even if it "sounds like a request".
-  const startsLikeQuestion =
-    /^(what|why|how|which|who|when|where|can|could|would|should|is|are|do|does)\b/i.test(t);
-
-  const hasQuestionIntent =
-    /\b(what\s+do\s+you\s+mean|meaning|clarify|define|definition|why|how|which|what\s+is|what\s+are|what\s+should\s+i\s+do|which\s+one|how\s+can\s+i)\b/i.test(
-      t
-    );
-
-  const isQuestioningStance =
-    !isDirectiveElaboration && (qMarks > 0 || startsLikeQuestion || hasQuestionIntent);
-
-  // Multiple-questions: only for questioning stance
-  const qWordCount = (t.match(/\b(what|why|how|which|who|when|where)\b/gi) || []).length;
-  const isMultipleQuestions = isQuestioningStance && (qMarks >= 2 || qWordCount >= 2);
-
-  // E) Distress/worry (optional narrow trigger for sentence #1)
-  const hasWorried = /\b(worried|anxious|anxiety|panic)\b/i.test(t);
-
-  // --- priority order (top wins) ---
-  if (isMultipleQuestions) {
-    return { es: ES_SENTENCES.reasonableMulti, forbidReasonable: false };
-  }
-
-  // Directive elaboration: do NOT use reasonable question
-  if (isDirectiveElaboration) {
-    return { es: ES_SENTENCES.makesSense, forbidReasonable: true };
-  }
-
-  // Strong inability/difficulty: use "time to figure out"
-  if (hasStrongInability) {
-    return { es: ES_SENTENCES.timeToFigure, forbidReasonable: true };
-  }
-
-  // Needs/constraints: "concern"
-  if (hasNeedOrConstraint) {
-    return { es: ES_SENTENCES.concern, forbidReasonable: true };
-  }
-
-  // Mild difficulty
-  if (hasMildDifficulty) {
-    return { es: ES_SENTENCES.makesSense, forbidReasonable: true };
-  }
-
-  // Worried: only if explicitly worried/anxious/panic (narrow)
-  if (hasWorried) {
-    return { es: ES_SENTENCES.worried, forbidReasonable: true };
-  }
-
-  // True question (single)
-  if (isQuestioningStance) {
-    return { es: ES_SENTENCES.reasonableSingle, forbidReasonable: false };
-  }
-
-  // Default
-  return { es: ES_SENTENCES.understand, forbidReasonable: true };
+  return String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 // =====================
@@ -255,8 +153,14 @@ function cleanIssuePhrase(issue) {
   if (!s) return "";
 
   // remove common stress wrappers
-  s = s.replace(/^i['’]?\s*m\s+(really\s+)?(so\s+)?(stressed|stressful|worried|anxious)\s+about\s+/i, "");
-  s = s.replace(/^i\s+am\s+(really\s+)?(so\s+)?(stressed|stressful|worried|anxious)\s+about\s+/i, "");
+  s = s.replace(
+    /^i['’]?\s*m\s+(really\s+)?(so\s+)?(stressed|stressful|worried|anxious)\s+about\s+/i,
+    ""
+  );
+  s = s.replace(
+    /^i\s+am\s+(really\s+)?(so\s+)?(stressed|stressful|worried|anxious)\s+about\s+/i,
+    ""
+  );
   s = s.replace(/^about\s+/i, "");
 
   // remove possessive determiners
@@ -282,9 +186,18 @@ function extractTopicFromSlot0(userText) {
   s = s.split(/;\s*/)[0];
 
   // Remove stress statements
-  s = s.replace(/\bis\s+(really\s+)?(so\s+)?(very\s+)?(stressed|stressful|worried|anxious)\b.*$/i, "");
-  s = s.replace(/\bi['’]?\s*m\s+(really\s+)?(so\s+)?(very\s+)?(stressed|stressful|worried|anxious)\b.*$/i, "");
-  s = s.replace(/\bi\s+am\s+(really\s+)?(so\s+)?(very\s+)?(stressed|stressful|worried|anxious)\b.*$/i, "");
+  s = s.replace(
+    /\bis\s+(really\s+)?(so\s+)?(very\s+)?(stressed|stressful|worried|anxious)\b.*$/i,
+    ""
+  );
+  s = s.replace(
+    /\bi['’]?\s*m\s+(really\s+)?(so\s+)?(very\s+)?(stressed|stressful|worried|anxious)\b.*$/i,
+    ""
+  );
+  s = s.replace(
+    /\bi\s+am\s+(really\s+)?(so\s+)?(very\s+)?(stressed|stressful|worried|anxious)\b.*$/i,
+    ""
+  );
 
   // Clean punctuation
   s = s.replace(/[.?!]\s*$/g, "").trim();
@@ -318,61 +231,6 @@ function normalizeTopicPhrase(topic) {
   return t;
 }
 
-function classifyQuestionForFollowup(userText) {
-  const raw = String(userText || "").trim();
-  const t = normalize(raw);
-
-  // (a) question marks
-  const qMarks = (raw.match(/\?/g) || []).length;
-
-  // (b) starts like a direct question (even without ?)
-  const startsLikeQuestion =
-    /^(what|why|how|which|who|when|where|can|could|would|should|is|are|do|does)\b/i.test(t);
-
-  // (c) common “question intent” phrases even if not at start
-  // e.g., "tell me how to...", "can you explain...", "what is X"
-  const hasQuestionIntent =
-    /\b(can\s+you|could\s+you|would\s+you|please\s+explain|explain|clarify|define|definition|meaning|what\s+is|what\s+are|how\s+to|how\s+can\s+i|what\s+should\s+i\s+do|which\s+one)\b/i.test(
-      t
-    );
-
-  const isQuestion = qMarks > 0 || startsLikeQuestion || hasQuestionIntent;
-
-  if (!isQuestion) {
-    return { isQuestion: false, isMultiple: false, forcedES: null };
-  }
-
-  // ---- Multiple-question detection ----
-  // 1) >=2 question marks
-  if (qMarks >= 2) {
-    return { isQuestion: true, isMultiple: true, forcedES: "These are reasonable questions." };
-  }
-
-  // 2) more than one question-word appears
-  const qWordCount = (t.match(/\b(what|why|how|which|who|when|where)\b/gi) || []).length;
-  if (qWordCount >= 2) {
-    return { isQuestion: true, isMultiple: true, forcedES: "These are reasonable questions." };
-  }
-
-  // 3) two question clauses joined by "and/or" (works even with one ? at end)
-  // e.g., "Which workshops... and how can I..."
-  const hasAndOr = /\b(and|or)\b/i.test(t);
-  if (hasAndOr && (qWordCount >= 1 || startsLikeQuestion)) {
-    // rough but practical: if it has a connector + question structure, treat as multiple
-    // Example: "Which ... and how ..."
-    if (
-      /\b(what|why|how|which|who|when|where)\b.*\b(and|or)\b.*\b(what|why|how|which|who|when|where)\b/i.test(
-        t
-      )
-    ) {
-      return { isQuestion: true, isMultiple: true, forcedES: "These are reasonable questions." };
-    }
-  }
-
-  // default: single question
-  return { isQuestion: true, isMultiple: false, forcedES: "It’s a reasonable question." };
-}
-
 function buildSlot2Target(session) {
   // We ONLY use the stressor itself (from Slot0 issue), NOT the reason (Slot1 whyStressful)
   const issueRaw = session?.memory?.issue || "";
@@ -393,7 +251,11 @@ function buildSlot2Target(session) {
   }
 
   // papers/essays/thesis/dissertation
-  if (/\b(paper|essay|thesis|dissertation|proposal|literature\s*review|report)\b/i.test(t)) {
+  if (
+    /\b(paper|essay|thesis|dissertation|proposal|literature\s*review|report)\b/i.test(
+      t
+    )
+  ) {
     return `working on ${issue}`;
   }
 
@@ -492,7 +354,10 @@ function containsCrisisLanguage(text) {
 
   if (regexes.some((r) => r.test(t))) return true;
 
-  if (/\bi\s+want\s+to\b/i.test(t) && /\b(die|kill\s+myself|end\s+my\s+life)\b/i.test(t)) {
+  if (
+    /\bi\s+want\s+to\b/i.test(t) &&
+    /\b(die|kill\s+myself|end\s+my\s+life)\b/i.test(t)
+  ) {
     return true;
   }
   return false;
@@ -582,8 +447,8 @@ function isEndIntent(userText, prevBotSlotId, type) {
 
   // 1) 明确结束词：在允许结束的 slots 才生效
   const hasExplicitEnd =
-  /\b(end|stop|exit|quit|leave|terminate)\b/i.test(t) ||
-  /\bend\s+(this|the|our)?\s*(chat|conversation|study)\b/i.test(t);
+    /\b(end|stop|exit|quit|leave|terminate)\b/i.test(t) ||
+    /\bend\s+(this|the|our)?\s*(chat|conversation|study)\b/i.test(t);
 
   // 2) 拒绝建议/想结束：在允许结束的 slots 才生效
   const refuseAdvicePhrases = [
@@ -597,13 +462,13 @@ function isEndIntent(userText, prevBotSlotId, type) {
     "let's end",
   ];
   const refusesAdvice =
-  /\b(no\s+advice)\b/i.test(t) ||
-  /\b(i\s+do\s*not\s+want\s+(any\s+)?advice)\b/i.test(t) ||
-  /\b(i\s+don'?t\s+want\s+(any\s+)?advice)\b/i.test(t) ||
-  /\b(don'?t\s+give\s+advice)\b/i.test(t) ||
-  /\b(do\s+not\s+give\s+advice)\b/i.test(t) ||
-  /\b(i\s+want\s+to\s+(end|stop))\b/i.test(t) ||
-  /\b(let'?s\s+end)\b/i.test(t);
+    /\b(no\s+advice)\b/i.test(t) ||
+    /\b(i\s+do\s*not\s+want\s+(any\s+)?advice)\b/i.test(t) ||
+    /\b(i\s+don'?t\s+want\s+(any\s+)?advice)\b/i.test(t) ||
+    /\b(don'?t\s+give\s+advice)\b/i.test(t) ||
+    /\b(do\s+not\s+give\s+advice)\b/i.test(t) ||
+    /\b(i\s+want\s+to\s+(end|stop))\b/i.test(t) ||
+    /\b(let'?s\s+end)\b/i.test(t);
 
   // 3) bare no/nope：只在“明确给了 continue/end 选择”的那个 slot 才算结束
   const isBareNo = t === "no" || t === "nope";
@@ -629,7 +494,8 @@ function isEndIntent(userText, prevBotSlotId, type) {
   if (isBareNo) return noMeansEndSlots.has(prevBotSlotId);
 
   // 明确 end / refuse advice：只在 allowedSlots 才结束
-  if (allowedSlots.has(prevBotSlotId) && (hasExplicitEnd || refusesAdvice)) return true;
+  if (allowedSlots.has(prevBotSlotId) && (hasExplicitEnd || refusesAdvice))
+    return true;
 
   return false;
 }
@@ -704,7 +570,11 @@ function updateMemoryFromUserAnswer(session, prevBotSlotId, userText) {
   if (need) session.memory.userNeed = need;
 
   const pref = extractUserPreference(userText);
-  if (pref) session.memory.userPreference = mergePreference(session.memory.userPreference, pref);
+  if (pref)
+    session.memory.userPreference = mergePreference(
+      session.memory.userPreference,
+      pref
+    );
 }
 
 // =====================
@@ -714,7 +584,9 @@ function parseOptionsABC(botText) {
   const t = String(botText || "");
   const out = { A: "", B: "", C: "" };
 
-  const a = t.match(/-\s*First,\s*([\s\S]*?)(?=\n-\s*Next,|\n-\s*Then,|$)/i);
+  const a = t.match(
+    /-\s*First,\s*([\s\S]*?)(?=\n-\s*Next,|\n-\s*Then,|$)/i
+  );
   const b = t.match(/-\s*Next,\s*([\s\S]*?)(?=\n-\s*Then,|$)/i);
   const c = t.match(/-\s*Then,\s*([\s\S]*?)(?=$)/i);
   if (a && a[1]) out.A = a[1].trim().replace(/\s+$/g, "");
@@ -725,15 +597,22 @@ function parseOptionsABC(botText) {
     const na = t.match(
       /One option you could consider is\s*([\s\S]*?)(?=Another option is|A third option is|What do you think|$)/i
     );
-    const nb = t.match(/Another option is\s*([\s\S]*?)(?=A third option is|What do you think|$)/i);
-    const nc = t.match(/A third option is\s*([\s\S]*?)(?=What do you think|$)/i);
+    const nb = t.match(
+      /Another option is\s*([\s\S]*?)(?=A third option is|What do you think|$)/i
+    );
+    const nc = t.match(
+      /A third option is\s*([\s\S]*?)(?=What do you think|$)/i
+    );
     if (na && na[1]) out.A = na[1].trim();
     if (nb && nb[1]) out.B = nb[1].trim();
     if (nc && nc[1]) out.C = nc[1].trim();
   }
 
   for (const k of ["A", "B", "C"]) {
-    out[k] = String(out[k] || "").trim().replace(/[“”"]/g, "").trim();
+    out[k] = String(out[k] || "")
+      .trim()
+      .replace(/[“”"]/g, "")
+      .trim();
   }
   return out;
 }
@@ -785,146 +664,49 @@ function pushAdviceHistory(session, botText) {
 }
 
 // =====================
-// ES prefix generator (2 sentences): comfort + acknowledge concern
+// ES prefix generator (1–2 sentences): validate + care + empathy (+ light encouragement)
+// For Type3 & Type4 follow-ups
 // =====================
-async function generateComfortPlusAcknowledge(userText) {
+async function generateESPrefix(userText) {
+  const raw = String(userText || "").trim();
+
   const messages = [
     {
       role: "system",
       content:
-        "Write EXACTLY two short sentences.\n" +
-        "Goal:\n" +
-        "- Sentence 1: a brief comfort/soothing sentence.\n" +
-        "- Sentence 2: acknowledge the user's concern as valid/real/reasonable (can be common, but do NOT always say 'Many people...').\n\n" +
+        "Write EXACTLY 1 or 2 short sentences.\n" +
+        "Purpose:\n" +
+        "- Validate the user's feelings or concern.\n" +
+        "- Show care and empathy.\n" +
+        "- Gentle encouragement is allowed, but keep it subtle.\n\n" +
         "Hard rules:\n" +
-        "- Output ONLY two sentences, nothing else.\n" +
+        "- Output ONLY the 1–2 sentences. No lists, no extra text.\n" +
         "- Do NOT give advice, steps, solutions, or examples.\n" +
-        "- Do NOT ask questions.\n" +
-        "- Do NOT mention therapy/counseling/diagnosis/hotlines.\n\n" +
-        "Anti-repetition rules (STRICT):\n" +
-        "- Vary sentence openings. You MAY use 'It's okay...' sometimes, but NOT every time.\n" +
-        "- Do NOT use both of these in the same prefix: 'It's okay to feel...' + 'Many people...'.\n" +
-        "- Avoid starting Sentence 2 with 'Many people...' or 'It’s common...' unless it truly fits.\n" +
-        "- Avoid 'It might be helpful...' (sounds like advice).\n" +
-        "- Keep it natural and non-formulaic."
+        "- Do NOT explain your approach (e.g., 'This helps because...').\n" +
+        "- Do NOT ask any questions.\n" +
+        "- Do NOT mention therapy, counseling, diagnosis, or hotlines.\n\n" +
+        "Style constraints:\n" +
+        "- Keep it natural and human, not robotic.\n" +
+        "- Vary sentence openings.\n" +
+        "- Avoid 'Many people...' or 'It’s common...' unless truly necessary.\n\n" +
+        "Language:\n" +
+        "- Match the user's language (English vs Chinese).",
     },
-    { role: "user", content: `User message:\n${String(userText || "").trim()}` }
+    { role: "user", content: `User message:\n${raw}` },
   ];
 
   const payload = { model: "gpt-4o-mini", messages, temperature: 0.7 };
   const reply = await callOpenAI(payload);
 
   const sentences =
-    (reply || "").replace(/\s+/g, " ").trim().match(/[^.!?]+[.!?]/g) || [];
+    (reply || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .match(/[^.!?。！？]+[.!?。！？]/g) || [];
 
-  const s1 = (sentences[0] || "I understand.").trim();
-  const s2 = (sentences[1] || "That’s a real concern in situations like this.").trim();
+  const out = sentences.slice(0, 2).join(" ").trim();
 
-  return `${s1} ${s2}`.trim();
-}
-
-
-// =====================
-// ES prefix generator (1 sentence): comfort + acknowledge (compressed)
-// =====================
-async function generateComfortAcknowledgeOneSentence(userText) {
-  const messages = [
-    {
-      role: "system",
-      content:
-        "Write EXACTLY one short sentence.\n" +
-        "Goal:\n" +
-        "- Combine brief comfort/soothing AND acknowledgement of the user's concern into ONE sentence.\n\n" +
-        "Hard rules:\n" +
-        "- Output ONLY one sentence, nothing else.\n" +
-        "- The sentence should acknowledge the concern as valid/real/reasonable or common.\n" +
-        "- Do NOT give advice, steps, solutions, or examples.\n" +
-        "- Do NOT ask questions.\n" +
-        "- Do NOT mention therapy/counseling/diagnosis/hotlines.\n\n" +
-        "Anti-repetition rules (STRICT):\n" +
-        "- Vary sentence openings. You MAY use 'It's okay...' sometimes, but NOT every time.\n" +
-        "- Avoid 'Many people...' or 'It’s common...' unless it truly fits.\n" +
-        "- Avoid 'It might be helpful...' (sounds like advice).\n" +
-        "- Keep it natural and non-formulaic.\n\n" +
-        "Good examples (do not copy exactly every time):\n" +
-        "- 'It’s okay to feel this way, and that’s a real concern in situations like this.'\n" +
-        "- 'This can feel heavy at times, and your concern here is valid.'\n" +
-        "- 'It’s understandable to feel this way given the situation.'\n" +
-        "- 'That feeling is real, and it’s a reasonable concern to have.'"
-    },
-    { role: "user", content: `User message:\n${String(userText || "").trim()}` }
-  ];
-
-  const payload = { model: "gpt-4o-mini", messages, temperature: 0.7 };
-  const reply = await callOpenAI(payload);
-
-  const sentence =
-    (reply || "").replace(/\s+/g, " ").trim().match(/[^.!?]+[.!?]/);
-
-  // fallback: SAME emotional tier as your 2-sentence version
-  return (
-    sentence?.[0] ||
-    "It’s okay to feel this way, and that’s a real concern in situations like this."
-  ).trim();
-}
-
-
-// =====================
-// ES prefix generator (1 sentence): comfort ONLY (no acknowledge)
-// =====================
-async function generateComfortOnly(userText) {
-  const messages = [
-    {
-      role: "system",
-      content:
-        "Write EXACTLY ONE sentence.\n" +
-        "Goal:\n" +
-        "- Provide a brief comforting or calming sentence.\n\n" +
-        "Rules:\n" +
-        "- Do NOT acknowledge/validate the user's concern (no 'reasonable/understandable/valid').\n" +
-        "- Do NOT give advice or instructions.\n" +
-        "- Do NOT ask questions.\n" +
-        "- Avoid starting with 'It's okay...' every time.\n" +
-        "- Output ONLY one sentence, nothing else."
-    },
-    { role: "user", content: `User message:\n${String(userText || "").trim()}` }
-  ];
-
-  const payload = { model: "gpt-4o-mini", messages, temperature: 0.6 };
-  const reply = await callOpenAI(payload);
-
-  const m = (reply || "").replace(/\s+/g, " ").trim().match(/[^.!?]+[.!?]/);
-  return (m?.[0] || "I hear you.").trim();
-}
-
-// =====================
-// ES prefix generator (1 sentence): ACKNOWLEDGE ONLY (no comfort)
-// For Type4 follow-ups
-// =====================
-async function generateDirectiveES(userText) {
-  const messages = [
-    {
-      role: "system",
-      content:
-        "Write EXACTLY one short sentence.\n" +
-        "Goal:\n" +
-        "- Acknowledge the user's concern as valid/real/reasonable.\n" +
-        "Rules:\n" +
-        "- Output ONLY one sentence, nothing else.\n" +
-        "- Do NOT include comfort/soothing language (e.g., 'It's okay', 'I'm sorry', 'I hear you').\n" +
-        "- Do NOT give advice, steps, solutions, or examples.\n" +
-        "- Do NOT ask questions.\n" +
-        "- Do NOT mention therapy/counseling/diagnosis/hotlines.\n" +
-        "- Keep it natural and non-formulaic; vary sentence openings."
-    },
-    { role: "user", content: `User message:\n${String(userText || "").trim()}` }
-  ];
-
-  const payload = { model: "gpt-4o-mini", messages, temperature: 0.5 };
-  const reply = await callOpenAI(payload);
-
-  const m = (reply || "").replace(/\s+/g, " ").trim().match(/[^.!?]+[.!?]/);
-  return (m?.[0] || "That’s a valid concern here.").trim();
+  return out || "I hear you, and your concern here is completely understandable.";
 }
 
 // =====================
@@ -1000,7 +782,10 @@ app.get("/download/:sessionId.txt", (req, res) => {
 
   const txt = lines.join("\n");
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
-  res.setHeader("Content-Disposition", `attachment; filename="chat_history_${sessionId}.txt"`);
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="chat_history_${sessionId}.txt"`
+  );
   return res.send(txt);
 });
 
@@ -1021,13 +806,14 @@ app.post("/chat", async (req, res) => {
 
   const condition = dialogues[session.conditionId];
   if (!condition) {
-    return res.status(500).json({ error: `Condition not found: ${session.conditionId}` });
+    return res
+      .status(500)
+      .json({ error: `Condition not found: ${session.conditionId}` });
   }
 
   const type = condition?.factors?.type; // 只能出现一次
 
   if (!session.memory) session.memory = {};
-if (typeof session.memory._ackCount !== "number") session.memory._ackCount = 0;
 
   // ---- HARD STOP states ----
   if (session.crisis) {
@@ -1070,44 +856,48 @@ if (typeof session.memory._ackCount !== "number") session.memory._ackCount = 0;
   }
 
   // If empty user message arrives (common during cold start / double init),
-// do NOT error. Just repeat last assistant message or re-send Slot 0.
-// This prevents participants seeing an error screen.
-if (!userText) {
-  // If not started yet, behave like init and send Slot 0
-  if (!session.started) {
-    session.started = true;
-    session.slotIndex = 0;
+  // do NOT error. Just repeat last assistant message or re-send Slot 0.
+  // This prevents participants seeing an error screen.
+  if (!userText) {
+    // If not started yet, behave like init and send Slot 0
+    if (!session.started) {
+      session.started = true;
+      session.slotIndex = 0;
 
-    const slot0 = condition.slots[0];
-    const reply = slot0.fixedBotText;
+      const slot0 = condition.slots[0];
+      const reply = slot0.fixedBotText;
 
-    session.history.push({ role: "assistant", slotId: 0, text: reply, ts: Date.now() });
-    logToDbSafe(sessionId, session.conditionId, "assistant", 0, reply);
+      session.history.push({
+        role: "assistant",
+        slotId: 0,
+        text: reply,
+        ts: Date.now(),
+      });
+      logToDbSafe(sessionId, session.conditionId, "assistant", 0, reply);
 
+      return res.json({
+        reply,
+        slotId: 0,
+        done: false,
+        sessionId,
+        conditionId: session.conditionId,
+        repeated: true,
+      });
+    }
+
+    // If already started, repeat the last assistant message (fallback to Slot0)
+    const lastAssistant = [...session.history].reverse().find((h) => h.role === "assistant");
+    const reply = lastAssistant?.text || condition?.slots?.[0]?.fixedBotText || "Hi.";
 
     return res.json({
       reply,
-      slotId: 0,
+      slotId: lastAssistant?.slotId ?? 0,
       done: false,
       sessionId,
       conditionId: session.conditionId,
       repeated: true,
     });
   }
-
-  // If already started, repeat the last assistant message (fallback to Slot0)
-  const lastAssistant = [...session.history].reverse().find((h) => h.role === "assistant");
-  const reply = lastAssistant?.text || condition?.slots?.[0]?.fixedBotText || "Hi.";
-
-  return res.json({
-    reply,
-    slotId: lastAssistant?.slotId ?? 0,
-    done: false,
-    sessionId,
-    conditionId: session.conditionId,
-    repeated: true,
-  });
-}
 
   // ---- crisis check ----
   if (containsCrisisLanguage(userText)) {
@@ -1117,58 +907,67 @@ if (!userText) {
     const reply = crisisResponse();
     session.history.push({ role: "user", slotId: null, text: userText, ts: Date.now() });
     logToDbSafe(sessionId, session.conditionId, "user", null, userText);
-    
+
     session.history.push({ role: "assistant", slotId: null, text: reply, ts: Date.now() });
     logToDbSafe(sessionId, session.conditionId, "assistant", null, reply);
 
-
-    return res.json({ reply, done: true, sessionId, slotId: null, conditionId: session.conditionId });
+    return res.json({
+      reply,
+      done: true,
+      sessionId,
+      slotId: null,
+      conditionId: session.conditionId,
+    });
   }
 
   // Determine prev bot slotId
   const prevIndex = session.slotIndex;
   const prevBotSlotId = condition.slotOrder[prevIndex];
 
-  const lastAssistant = [...session.history].reverse().find(h => h.role === "assistant");
-console.log("[END DEBUG]", {
-  conditionId: session.conditionId,
-  type,
-  prevIndex,
-  prevBotSlotId,
-  lastAssistantSlotId: lastAssistant?.slotId,
-  lastAssistantText: lastAssistant?.text,
-  userText
-});
+  const lastAssistant = [...session.history].reverse().find((h) => h.role === "assistant");
+  console.log("[END DEBUG]", {
+    conditionId: session.conditionId,
+    type,
+    prevIndex,
+    prevBotSlotId,
+    lastAssistantSlotId: lastAssistant?.slotId,
+    lastAssistantText: lastAssistant?.text,
+    userText,
+  });
 
   // end intent
-
   if (isEndIntent(userText, prevBotSlotId, type)) {
     session.done = true;
-    const reply = "You have reached the end of the conversation. Thank you for your participation.";
+    const reply =
+      "You have reached the end of the conversation. Thank you for your participation.";
 
     session.history.push({ role: "user", slotId: prevBotSlotId, text: userText, ts: Date.now() });
     logToDbSafe(sessionId, session.conditionId, "user", prevBotSlotId, userText);
-    
+
     session.history.push({ role: "assistant", slotId: null, text: reply, ts: Date.now() });
     logToDbSafe(sessionId, session.conditionId, "assistant", null, reply);
 
-
-    return res.json({ reply, done: true, sessionId, slotId: null, conditionId: session.conditionId });
+    return res.json({
+      reply,
+      done: true,
+      sessionId,
+      slotId: null,
+      conditionId: session.conditionId,
+    });
   }
 
   // =====================
 
   // store user answer + update memory
   session.history.push({
-  role: "user",
-  slotId: prevBotSlotId,
-  text: userText,
-  ts: Date.now(),
-});
-logToDbSafe(sessionId, session.conditionId, "user", prevBotSlotId, userText);
+    role: "user",
+    slotId: prevBotSlotId,
+    text: userText,
+    ts: Date.now(),
+  });
+  logToDbSafe(sessionId, session.conditionId, "user", prevBotSlotId, userText);
 
-updateMemoryFromUserAnswer(session, prevBotSlotId, userText);
-
+  updateMemoryFromUserAnswer(session, prevBotSlotId, userText);
 
   // move to next slot
   session.slotIndex += 1;
@@ -1192,7 +991,11 @@ updateMemoryFromUserAnswer(session, prevBotSlotId, userText);
   // =====================
   const botStyle = condition?.factors?.style;
 
-  if (currentSlotId === 2 && botStyle === "collaborative" && (type === "type1" || type === "type3")) {
+  if (
+    currentSlotId === 2 &&
+    botStyle === "collaborative" &&
+    (type === "type1" || type === "type3")
+  ) {
     const rawTopic = String(session?.memory?.slotTopic || "").trim();
     const normalizedTopic = normalizeTopicPhrase(rawTopic);
 
@@ -1220,7 +1023,7 @@ updateMemoryFromUserAnswer(session, prevBotSlotId, userText);
       topic = "your academic issue";
     }
 
-    // --- Type3 Slot2: pick ONE emotional-support sentence (uncertainty-aware) ---
+    // --- Type3 Slot2: keep your existing behavior (unchanged) ---
     const tUser = normalize(userText);
 
     const wordCount = tUser.split(/\s+/).filter(Boolean).length;
@@ -1232,20 +1035,30 @@ updateMemoryFromUserAnswer(session, prevBotSlotId, userText);
       );
 
     const hasUncertaintyCue =
-      /\b(i\s*(do\s*not|don't)\s*know|idk|not\s*sure|maybe|i guess|kind of)\b/i.test(tUser);
+      /\b(i\s*(do\s*not|don't)\s*know|idk|not\s*sure|maybe|i guess|kind of)\b/i.test(
+        tUser
+      );
 
     const isUncertain = hasUncertaintyCue && !hasElaborationStructure;
 
-    const isQuestion = /\?/.test(userText) || /^(what|why|how|which|can|could|do|does|is|are)\b/i.test(tUser);
+    const isQuestion =
+      /\?/.test(userText) ||
+      /^(what|why|how|which|can|could|do|does|is|are)\b/i.test(tUser);
 
     const isDistress =
       /\b(distress(ed)?|anxious|anxiety|worried|panic|craving|withdrawal|uncomfortable|upset|can'?t\s+focus|irritable)\b/i.test(
         tUser
       );
 
-    const slot2UncertaintyBank = ["That’s okay.", "It can be hard to put it into words.", "No worries if you’re not sure."];
+    const slot2UncertaintyBank = [
+      "That’s okay.",
+      "It can be hard to put it into words.",
+      "No worries if you’re not sure.",
+    ];
 
-    const slot2DistressBank = ["It is fine to feel that way. Anyone in your situation would find it stressful."];
+    const slot2DistressBank = [
+      "It is fine to feel that way. Anyone in your situation would find it stressful.",
+    ];
 
     const slot2QuestionBank = ["It’s a reasonable question."];
 
@@ -1273,9 +1086,8 @@ updateMemoryFromUserAnswer(session, prevBotSlotId, userText);
       slotId: currentSlotId,
       text: reply,
       ts: Date.now(),
-});
-logToDbSafe(sessionId, session.conditionId, "assistant", currentSlotId, reply);
-
+    });
+    logToDbSafe(sessionId, session.conditionId, "assistant", currentSlotId, reply);
 
     return res.json({
       reply,
@@ -1325,7 +1137,9 @@ ${session.memory.adviceHistory
 
   const lastOptionsBlock =
     session.memory.lastBotOptions &&
-    (session.memory.lastBotOptions.A || session.memory.lastBotOptions.B || session.memory.lastBotOptions.C)
+    (session.memory.lastBotOptions.A ||
+      session.memory.lastBotOptions.B ||
+      session.memory.lastBotOptions.C)
       ? `Last options shown to the user:
 - Option A: ${session.memory.lastBotOptions.A || "[missing]"}
 - Option B: ${session.memory.lastBotOptions.B || "[missing]"}
@@ -1415,63 +1229,43 @@ ${noRepeatBlock}
     }
   }
 
-  // Type3 follow-up slots 5/6/7 // 
+  // =====================
+  // Type3 follow-up slots 5/6/7: SERVER adds ES prefix (1–2 sentences)
+  // =====================
   if (type === "type3" && [5, 6, 7].includes(currentSlotId)) {
-  // ack limit shared across type3+type4
-  const ackUsed = session.memory._ackCount < 2;
+    session.memory._type3ESPrefix = await generateESPrefix(userText);
 
-  // type3: want comfort+ack for the first 2 times, then comfort-only
-  const es2 = ackUsed
-    ? await generateComfortPlusAcknowledge(userText) // 2 sentences
-    : await generateComfortOnly(userText);           // 1 sentence
+    const EXACT_END =
+      "I’m glad to hear that. You’ve done a good job thinking about your situation so far! I wish you all the best. (This is the end of our conversation.)";
 
-  if (ackUsed) session.memory._ackCount += 1;
-
-  session.memory._type3ESPrefix = es2;
-
-  const EXACT_END =
-    "I’m glad to hear that. You’ve done a good job thinking about your situation so far! I wish you all the best. (This is the end of our conversation.)";
-
-  messages.splice(messages.length - 1, 0, {
-    role: "system",
-    content:
-      "TYPE3 FOLLOW-UP SERVER POLICY:\n" +
-      `- If you apply rule 1a/1b/1c, output EXACTLY this sentence and nothing else:\n"${EXACT_END}"\n` +
-      "- If you apply rule 2a/2b/2c (reject-all), output EXACTLY ONE of these starts and then the fixed question:\n" +
-      '"I\'m sorry to hear that. Could you tell me which parts you think should be revised?"\n' +
-      '"It’s usual to take some time to figure out what doesn’t quite fit. Could you tell me which parts you think should be revised?"\n' +
-      "- Otherwise (rules 3/4/5/Fallback), DO NOT output any emotional-support sentence at all. Start directly with the required content. The SERVER will add exactly one emotional-support prefix.",
-  });
-}
-
+    messages.splice(messages.length - 1, 0, {
+      role: "system",
+      content:
+        "TYPE3 FOLLOW-UP SERVER POLICY:\n" +
+        `- If you apply rule 1a/1b/1c, output EXACTLY this sentence and nothing else:\n"${EXACT_END}"\n` +
+        "- If you apply rule 2a/2b/2c (reject-all), output EXACTLY ONE of these starts and then the fixed question:\n" +
+        '"I\'m sorry to hear that. Could you tell me which parts you think should be revised?"\n' +
+        '"It’s usual to take some time to figure out what doesn’t quite fit. Could you tell me which parts you think should be revised?"\n' +
+        "- Otherwise (rules 3/4/5/Fallback), DO NOT output any emotional-support language at all. Start directly with the required content. The SERVER will add the emotional-support prefix (1–2 sentences).",
+    });
+  }
 
   // =====================
-// Type4 follow-up slots 3/4/5: SERVER adds EXACTLY ONE ES sentence
-// (Use SAME selection standard as Type3 via pickESForType3Followup)
-// =====================
-if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
-  const ackUsed = session.memory._ackCount < 2;
+  // Type4 follow-up slots 3/4/5: SERVER adds ES prefix (1–2 sentences)
+  // =====================
+  if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
+    session.memory._type4ESPrefix = await generateESPrefix(userText);
 
-  // type4: first 2 times = acknowledge-only (1 sentence), then comfort-only (1 sentence)
-  const es2 = ackUsed
-    ? await generateDirectiveES(userText)   // 1 sentence acknowledge
-    : await generateComfortOnly(userText); // 1 sentence comfort
-
-  if (ackUsed) session.memory._ackCount += 1;
-
-  session.memory._type4ESPrefix = es2;
-
-  messages.splice(messages.length - 1, 0, {
-    role: "system",
-    content:
-      "TYPE4 FOLLOW-UP SERVER POLICY:\n" +
-  "- An emotional-support prefix (1 sentence) will be added by the SERVER.\n" +
-  "- Therefore, you MUST NOT output ANY emotional-support language (no comfort, no validation, no empathy phrases like 'I understand', 'That makes sense').\n" +
-  "- Start directly with the required directive content.\n" +
-  "- Your first sentence MUST start with an imperative verb (as required by the slot).\n",
-  });
-}
-
+    messages.splice(messages.length - 1, 0, {
+      role: "system",
+      content:
+        "TYPE4 FOLLOW-UP SERVER POLICY:\n" +
+        "- An emotional-support prefix (1–2 sentences) will be added by the SERVER.\n" +
+        "- Therefore, you MUST NOT output ANY emotional-support language (no comfort, no validation, no empathy phrases like 'I understand', 'That makes sense').\n" +
+        "- Start directly with the required directive content.\n" +
+        "- Your first sentence MUST start with an imperative verb (as required by the slot).\n",
+    });
+  }
 
   try {
     const payload = {
@@ -1482,64 +1276,79 @@ if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
 
     let reply = await callOpenAI(payload);
 
-    // ✅ Inject EXACTLY ONE ES sentence for Type3 slots 5/6/7 (GUARDED)
-if (type === "type3" && [5, 6, 7].includes(currentSlotId)) {
-  let raw = String(reply || "").trim();
+    // ✅ Inject ES prefix for Type3 slots 5/6/7 (GUARDED)
+    if (type === "type3" && [5, 6, 7].includes(currentSlotId)) {
+      let raw = String(reply || "").trim();
 
-  const EXACT_END =
-    "I’m glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)";
+      const EXACT_END =
+        "I’m glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)";
 
-  // 1a/1b/1c exact ending sentence only -> DO NOT inject
-  if (raw === EXACT_END) {
-    reply = raw;
-  } else {
-    // 2a/2b/2c fixed pattern: model already contains exactly-one ES + fixed question
-    const isFixed2x =
-      /^(I'm sorry to hear that\.|It’s usual to take some time to figure out what doesn’t quite fit\.)\s+/i.test(raw) &&
-      /\bwhich parts you think should be revised\?\s*$/i.test(raw);
+      // 1a/1b/1c exact ending sentence only -> DO NOT inject
+      if (raw === EXACT_END) {
+        reply = raw;
+      } else {
+        // 2a/2b/2c fixed pattern: model already contains exactly-one ES + fixed question
+        const isFixed2x =
+          /^(I'm sorry to hear that\.|It’s usual to take some time to figure out what doesn’t quite fit\.)\s+/i.test(
+            raw
+          ) && /\bwhich parts you think should be revised\?\s*$/i.test(raw);
 
-    if (isFixed2x) {
-      reply = raw; // do not inject
-    } else {
-      const es = (session.memory && session.memory._type3ESPrefix) || ES_SENTENCES.understand;
+        if (isFixed2x) {
+          reply = raw; // do not inject
+        } else {
+          const es =
+            (session.memory && session.memory._type3ESPrefix) || ES_SENTENCES.understand;
 
-      // strip common accidental ES prefixes if the model mistakenly produced them
+          // strip common accidental ES prefixes if the model mistakenly produced them
+          raw = raw
+            .replace(
+              /^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you|i get it|i can see why)\b[.!?。！？]?\s*/i,
+              ""
+            )
+            .replace(
+              /^(it['’]s (a )?reasonable question|your concern is valid|that’s a real concern|that’s valid)\b[.!?。！？]?\s*/i,
+              ""
+            )
+            .trim();
+
+          reply = `${es} ${raw}`.trim();
+        }
+      }
+
+      if (session.memory) delete session.memory._type3ESPrefix;
+    }
+
+    // ✅ Inject ES prefix for Type4 slots 3/4/5 (GUARDED)
+    if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
+      let raw = String(reply || "").trim();
+
       raw = raw
-        .replace(/^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you)\b[.!?]?\s*/i, "")
-        .replace(/^(it['’]s (a )?reasonable question)\b[.!?]?\s*/i, "")
+        .replace(
+          /^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you|i get it)\b[.!?。！？]?\s*/i,
+          ""
+        )
+        .replace(
+          /^(it['’]s (a )?reasonable question|your concern is valid|that’s a real concern)\b[.!?。！？]?\s*/i,
+          ""
+        )
         .trim();
 
-      reply = `${es} ${raw}`.trim();
+      // --- ending bypass: if model output is the exact ending, DO NOT inject ---
+      const isType4Ending =
+        /^\s*I['’]m glad to hear that\.\s*You['’]ve done a good job thinking about your situation so far\.\s*I wish you all the best\.\s*\(This is the end of our conversation\.\)\s*$/i.test(
+          raw
+        );
+
+      if (isType4Ending) {
+        reply = raw;
+      } else {
+        const es =
+          (session.memory && session.memory._type4ESPrefix) || ES_SENTENCES.understand;
+        reply = `${es} ${raw}`.trim();
+      }
+
+      if (session.memory) delete session.memory._type4ESPrefix;
     }
-  }
-
-  if (session.memory) delete session.memory._type3ESPrefix;
-}
-
-
-    // ✅ Inject EXACTLY ONE ES sentence for Type4 slots 3/4/5 (GUARDED)
-if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
-  let raw = String(reply || "").trim();
-
-  raw = raw
-    .replace(/^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you)\b[.!?]?\s*/i, "")
-    .replace(/^(it['’]s (a )?reasonable question)\b[.!?]?\s*/i, "")
-    .trim();
-
-  // --- ending bypass: if model output is the exact ending, DO NOT inject ---
-  const isType4Ending =
-  /^\s*I['’]m glad to hear that\.\s*You['’]ve done a good job thinking about your situation so far\.\s*I wish you all the best\.\s*\(This is the end of our conversation\.\)\s*$/i.test(raw);
-
-  if (isType4Ending) {
-    reply = raw;
-  } else {
-    const es = (session.memory && session.memory._type4ESPrefix) || ES_SENTENCES.understand;
-    reply = `${es} ${raw}`.trim();
-  }
-
-  if (session.memory) delete session.memory._type4ESPrefix;
-}
-
 
     // NEW: if this is Slot 1, capture the keyword/topic used in Slot 1 for Slot 2 reuse
     if (currentSlotId === 1) {
@@ -1562,13 +1371,12 @@ if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
 
     // save assistant reply
     session.history.push({
-  role: "assistant",
-  slotId: currentSlotId,
-  text: reply,
-  ts: Date.now(),
-});
-logToDbSafe(sessionId, session.conditionId, "assistant", currentSlotId, reply);
-
+      role: "assistant",
+      slotId: currentSlotId,
+      text: reply,
+      ts: Date.now(),
+    });
+    logToDbSafe(sessionId, session.conditionId, "assistant", currentSlotId, reply);
 
     // HARD END
     if (replyIndicatesDone(reply)) {
@@ -1591,7 +1399,7 @@ logToDbSafe(sessionId, session.conditionId, "assistant", currentSlotId, reply);
       conditionId: session.conditionId,
       memory: session.memory,
     });
-      } catch (e) {
+  } catch (e) {
     console.error("[CHAT ERROR]", e);
     return res.status(500).json({ ok: false, error: String(e) });
   }
@@ -1628,4 +1436,3 @@ app.get("/dbtest", async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
