@@ -694,7 +694,11 @@ function pushAdviceHistory(session, botText) {
 // ES prefix generator (1 sentences): validate + care + empathy (+ light encouragement)
 // For Type3 & Type4 follow-ups
 // =====================
-async function generateESPrefix(userText) {
+// =====================
+// ES prefix generator (1 sentence): validate + care + empathy (+ light encouragement)
+// For Type3 & Type4 follow-ups
+// =====================
+async function generateESPrefix(userText, session) {
   const raw = String(userText || "").trim();
 
   const messages = [
@@ -713,27 +717,42 @@ async function generateESPrefix(userText) {
         "- Do NOT ask questions.\n" +
         "- Do NOT explain your approach.\n" +
         "- Do NOT mention therapy, counseling, diagnosis, or hotlines.\n\n" +
-        "Style:\n" +
-        "- Natural, concise, non-verbose.",
+        "Anti-repetition (IMPORTANT):\n" +
+        "- Vary sentence openings across turns.\n" +
+        "- You MAY use 'It's understandable...', but NOT every time.\n" +
+        "- Do NOT start with the same first 3 words as the last prefix.\n",
     },
-    { role: "user", content: raw },
+    {
+      role: "user",
+      content:
+        "User message:\n" +
+        raw +
+        "\n\n" +
+        "Last prefix opener (first 3 words):\n" +
+        String((session && session.memory && session.memory.lastESOpener) || "[none]"),
+    },
   ];
 
   const payload = { model: "gpt-4o-mini", messages, temperature: 0.6 };
-  const reply = await callOpenAI(payload);
+  let reply = await callOpenAI(payload);
 
-  // ===== HARD SERVER ENFORCEMENT =====
-  const sentence =
-    (reply || "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .match(/^[^.!?]*[.!?]/)?.[0] || "";
+  reply = String(reply || "").trim();
 
-  const words = sentence.split(" ").filter(Boolean).slice(0, 15).join(" ");
+  // Keep only the first sentence (English punctuation)
+  let sentence = reply.split(/(?<=[.!?])\s+/)[0] || reply;
+  sentence = sentence.replace(/\s+/g, " ").trim();
 
-  return words
-    ? (/[.!?]$/.test(words) ? words : words + ".")
-    : "I understand how frustrating this feels.";
+  // Enforce <= 15 words
+  const wordsArr = sentence.split(" ").filter(Boolean);
+  if (wordsArr.length > 15) {
+    sentence = wordsArr.slice(0, 15).join(" ").replace(/[.,;:!?]+$/, "") + ".";
+  }
+
+  // Save opener for anti-repetition next turn
+  const opener = sentence.toLowerCase().split(" ").slice(0, 3).join(" ");
+  if (session && session.memory) session.memory.lastESOpener = opener;
+
+  return sentence || "I understand how frustrating this feels.";
 }
 
 // =====================
