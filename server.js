@@ -157,6 +157,69 @@ function appendEndingOnce(text, ending) {
   return `${t} ${ending}`.trim();
 }
 
+function stripLeadingEmotionalSupport(raw) {
+  let t = String(raw || "").trim();
+  if (!t) return t;
+
+  const sentences = t.split(/(?<=[.!?。！？])\s+/);
+
+  const isES = (s) => {
+    const x = s.trim().toLowerCase();
+    return (
+      x.startsWith("it sounds like") ||
+      x.startsWith("it seems like") ||
+      x.startsWith("it's understandable") ||
+      x.startsWith("it is understandable") ||
+      x.startsWith("it's completely normal") ||
+      x.startsWith("it is completely normal") ||
+      x.startsWith("it's normal") ||
+      x.startsWith("it is normal") ||
+      x.startsWith("it can be hard") ||
+      x.startsWith("i understand") ||
+      x.startsWith("i'm sorry") ||
+      x.startsWith("i am sorry") ||
+      x.startsWith("that makes sense") ||
+      x.startsWith("i hear you") ||
+      x.startsWith("i get it") ||
+      x.startsWith("i can see why") ||
+      x.startsWith("it's a reasonable question") ||
+      x.startsWith("it is a reasonable question")
+    );
+  };
+
+  let k = 0;
+  while (k < sentences.length && k < 2 && isES(sentences[k])) k++;
+
+  const out = sentences.slice(k).join(" ").trim();
+  return out || t;
+}
+
+function enforceNoQuestionAndEnd(reply, ending) {
+  let t = String(reply || "").trim();
+  if (!t) return ending;
+
+  // ❶ 切句（注意：这是正确的正则）
+  const sents = t
+    .split(/(?<=[.!?。！？])\s+/)
+    .map(x => x.trim())
+    .filter(Boolean);
+
+  // ❷ 删除所有“问句”
+  const kept = sents.filter(s => !/[?？]/.test(s));
+
+  t = kept.join(" ").trim();
+
+  // ❸ 最多保留两句
+  const s2 = t
+    .split(/(?<=[.!?。！？])\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(" ")
+    .trim();
+
+  // ❹ 拼 ending（只拼一次）
+  return appendEndingOnce(s2, ending);
+}
 
 // =====================
 // Slot 2 stressor phrase helpers (general; NO reason)
@@ -691,15 +754,12 @@ function pushAdviceHistory(session, botText) {
 }
 
 // =====================
-// ES prefix generator (1 sentences): validate + care + empathy (+ light encouragement)
-// For Type3 & Type4 follow-ups
-// =====================
-// =====================
-// ES prefix generator (1 sentence): validate + care + empathy (+ light encouragement)
-// For Type3 & Type4 follow-ups
+// ES prefix generator (EXACTLY 1 sentence, <=15 words)
+// For Type3 & Type4 follow-ups (server will inject)
 // =====================
 async function generateESPrefix(userText, session) {
   const raw = String(userText || "").trim();
+  const lastOpener = String(session?.memory?.lastESOpener || "").trim();
 
   const messages = [
     {
@@ -713,14 +773,14 @@ async function generateESPrefix(userText, session) {
         "- Gentle encouragement is allowed but subtle.\n\n" +
         "Hard rules:\n" +
         "- Output ONLY the sentence. No extra text.\n" +
+        '- Do NOT start with "It\'s", "It’s", or "It is".\n' +
         "- Do NOT give advice, steps, solutions, or examples.\n" +
         "- Do NOT ask questions.\n" +
         "- Do NOT explain your approach.\n" +
         "- Do NOT mention therapy, counseling, diagnosis, or hotlines.\n\n" +
         "Anti-repetition (IMPORTANT):\n" +
         "- Vary sentence openings across turns.\n" +
-        "- You MAY use 'It's understandable...', but NOT every time.\n" +
-        "- Do NOT start with the same first 3 words as the last prefix.\n",
+        "- Do NOT start with the same first 3 words as the last prefix opener provided.\n",
     },
     {
       role: "user",
@@ -729,7 +789,7 @@ async function generateESPrefix(userText, session) {
         raw +
         "\n\n" +
         "Last prefix opener (first 3 words):\n" +
-        String((session && session.memory && session.memory.lastESOpener) || "[none]"),
+        (lastOpener || "[none]"),
     },
   ];
 
@@ -738,21 +798,35 @@ async function generateESPrefix(userText, session) {
 
   reply = String(reply || "").trim();
 
-  // Keep only the first sentence (English punctuation)
+  // Keep only the first sentence
   let sentence = reply.split(/(?<=[.!?])\s+/)[0] || reply;
   sentence = sentence.replace(/\s+/g, " ").trim();
 
-  // Enforce <= 15 words
-  const wordsArr = sentence.split(" ").filter(Boolean);
-  if (wordsArr.length > 15) {
-    sentence = wordsArr.slice(0, 15).join(" ").replace(/[.,;:!?]+$/, "") + ".";
+  // Force <= 15 words
+  const words = sentence.split(" ").filter(Boolean);
+  if (words.length > 15) {
+    sentence = words.slice(0, 15).join(" ").replace(/[.,;:!?]+$/, "") + ".";
   }
 
-  // Save opener for anti-repetition next turn
-  const opener = sentence.toLowerCase().split(" ").slice(0, 3).join(" ");
-  if (session && session.memory) session.memory.lastESOpener = opener;
+  // If model violates "no It's" opener, fix minimally
+  if (/^(it['’]s|it is)\b/i.test(sentence)) {
+    sentence = sentence.replace(/^(it['’]s|it is)\b/i, "That’s");
+  }
 
-  return sentence || "I understand how frustrating this feels.";
+  // Server-side anti-repetition fallback:
+  // if the first 3 words are identical to last opener, swap common starters
+  const opener = sentence.toLowerCase().split(" ").slice(0, 3).join(" ").trim();
+  if (lastOpener && opener === lastOpener) {
+    sentence = sentence
+      .replace(/^(i understand|i’m sorry|im sorry|that makes sense)\b/i, "I hear you")
+      .replace(/^(that’s)\b/i, "I hear you");
+  }
+
+  // Save opener (first 3 words)
+  const newOpener = sentence.toLowerCase().split(" ").slice(0, 3).join(" ").trim();
+  if (session?.memory) session.memory.lastESOpener = newOpener;
+
+  return sentence || "I hear you, and this sounds really tough.";
 }
 
 // =====================
@@ -1271,44 +1345,6 @@ ${noRepeatBlock}
     }
   }
 
-  // =====================
-  // Type3 follow-up slots 5/6/7: SERVER adds ES prefix (1–2 sentences)
-  // =====================
-  if (type === "type3" && [5, 6, 7].includes(currentSlotId)) {
-    session.memory._type3ESPrefix = await generateESPrefix(userText);
-
-    const EXACT_END =
-      "I’m glad to hear that. You’ve done a good job thinking about your situation so far! I wish you all the best. (This is the end of our conversation.)";
-
-    messages.splice(messages.length - 1, 0, {
-      role: "system",
-      content:
-        "TYPE3 FOLLOW-UP SERVER POLICY:\n" +
-        `- If you apply rule 1a/1b/1c, output EXACTLY this sentence and nothing else:\n"${EXACT_END}"\n` +
-        "- If you apply rule 2a/2b/2c (reject-all), output EXACTLY ONE of these starts and then the fixed question:\n" +
-        '"I\'m sorry to hear that. Could you tell me which parts you think should be revised?"\n' +
-        '"It’s usual to take some time to figure out what doesn’t quite fit. Could you tell me which parts you think should be revised?"\n' +
-        "- Otherwise (rules 3/4/5/Fallback), DO NOT output any emotional-support language at all. Start directly with the required content. The SERVER will add the emotional-support prefix (1–2 sentences).",
-    });
-  }
-
-  // =====================
-  // Type4 follow-up slots 3/4/5: SERVER adds ES prefix (1–2 sentences)
-  // =====================
-  if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
-    session.memory._type4ESPrefix = await generateESPrefix(userText);
-
-    messages.splice(messages.length - 1, 0, {
-      role: "system",
-      content:
-        "TYPE4 FOLLOW-UP SERVER POLICY:\n" +
-        "- An emotional-support prefix (1–2 sentences) will be added by the SERVER.\n" +
-        "- Therefore, you MUST NOT output ANY emotional-support language (no comfort, no validation, no empathy phrases like 'I understand', 'That makes sense').\n" +
-        "- Start directly with the required directive content.\n" +
-        "- Your first sentence MUST start with an imperative verb (as required by the slot).\n",
-    });
-  }
-
   try {
     const payload = {
       model: "gpt-4o-mini",
@@ -1323,61 +1359,21 @@ const DICT_END = "I wish you all the best. (This is the end of our conversation.
 
 // ✅ 如果当前就是最后 slot：无论用户继续问什么，最后都拼上 ending
 if (currentSlotId === lastSlotId) {
-  reply = appendEndingOnce(reply, DICT_END);
+  reply = enforceNoQuestionAndEnd(reply, DICT_END);
 }
 
-    // ✅ Inject ES prefix for Type3 slots 5/6/7 (GUARDED)
+  // ✅ Inject ES prefix (server-side) for Type3 follow-up slots 5/6/7
 if (type === "type3" && [5, 6, 7].includes(currentSlotId)) {
-  let raw = String(reply || "").trim();
-
-  const isFixed2x =
-    /^(I'm sorry to hear that\.|It’s usual to take some time to figure out what doesn’t quite fit\.)\s+/i.test(raw) &&
-    /\bwhich parts you think should be revised\?\s*$/i.test(raw);
-
-  if (isFixed2x) {
-    reply = raw; // 不注入
-  } else {
-    const es =
-      (session.memory && session.memory._type3ESPrefix) || ES_SENTENCES.understand;
-
-    raw = raw
-      .replace(
-        /^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you|i get it|i can see why)\b[.!?。！？]?\s*/i,
-        ""
-      )
-      .replace(
-        /^(it['’]s (a )?reasonable question|your concern is valid|that’s a real concern|that’s valid)\b[.!?。！？]?\s*/i,
-        ""
-      )
-      .trim();
-
-    reply = `${es} ${raw}`.trim();
-  }
-
-  if (session.memory) delete session.memory._type3ESPrefix;
+  const es = await generateESPrefix(userText, session);
+  const raw = stripLeadingEmotionalSupport(reply);
+  reply = `${es} ${raw}`.trim();
 }
 
-    // ✅ Inject ES prefix for Type4 slots 3/4/5 (GUARDED)
-    if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
-  let raw = String(reply || "").trim();
-
-  raw = raw
-    .replace(
-      /^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you|i get it)\b[.!?。！？]?\s*/i,
-      ""
-    )
-    .replace(
-      /^(it['’]s (a )?reasonable question|your concern is valid|that’s a real concern)\b[.!?。！？]?\s*/i,
-      ""
-    )
-    .trim();
-
-  const es =
-    (session.memory && session.memory._type4ESPrefix) || ES_SENTENCES.understand;
-
+// ✅ Inject ES prefix (server-side) for Type4 follow-up slots 3/4/5
+if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
+  const es = await generateESPrefix(userText, session);
+  const raw = stripLeadingEmotionalSupport(reply);
   reply = `${es} ${raw}`.trim();
-
-  if (session.memory) delete session.memory._type4ESPrefix;
 }
 
     // NEW: if this is Slot 1, capture the keyword/topic used in Slot 1 for Slot 2 reuse
