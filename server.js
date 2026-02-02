@@ -430,6 +430,20 @@ function clarificationReplyForSlot(condition, slotId, type) {
 }
 
 // =====================
+// Canonical ending (Type3 & Type4 shared)
+// =====================
+const EXACT_END =
+  "I’m glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)";
+
+function hasEndMarker(text) {
+  const t = String(text || "");
+  return (
+    /\(this is the end of our conversation\.\)/i.test(t) ||
+    /you have reached the end of the conversation/i.test(t)
+  );
+}
+
+// =====================
 // 3) End-state detection (HARD STOP)
 // =====================
 function replyIndicatesDone(reply) {
@@ -1278,77 +1292,69 @@ ${noRepeatBlock}
 
     // ✅ Inject ES prefix for Type3 slots 5/6/7 (GUARDED)
     if (type === "type3" && [5, 6, 7].includes(currentSlotId)) {
-      let raw = String(reply || "").trim();
+  let raw = String(reply || "").trim();
 
-      const EXACT_END =
-        "I’m glad to hear that. You’ve done a good job thinking about your situation so far. I wish you all the best. (This is the end of our conversation.)";
+  // ✅ 只要模型输出带任何结束标记，直接收敛成唯一 ending，并跳过注入
+  if (hasEndMarker(raw)) {
+    reply = EXACT_END;
+  } else {
+    const isFixed2x =
+      /^(I'm sorry to hear that\.|It’s usual to take some time to figure out what doesn’t quite fit\.)\s+/i.test(raw) &&
+      /\bwhich parts you think should be revised\?\s*$/i.test(raw);
 
-      // 1a/1b/1c exact ending sentence only -> DO NOT inject
-      if (raw === EXACT_END) {
-        reply = raw;
-      } else {
-        // 2a/2b/2c fixed pattern: model already contains exactly-one ES + fixed question
-        const isFixed2x =
-          /^(I'm sorry to hear that\.|It’s usual to take some time to figure out what doesn’t quite fit\.)\s+/i.test(
-            raw
-          ) && /\bwhich parts you think should be revised\?\s*$/i.test(raw);
-
-        if (isFixed2x) {
-          reply = raw; // do not inject
-        } else {
-          const es =
-            (session.memory && session.memory._type3ESPrefix) || ES_SENTENCES.understand;
-
-          // strip common accidental ES prefixes if the model mistakenly produced them
-          raw = raw
-            .replace(
-              /^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you|i get it|i can see why)\b[.!?。！？]?\s*/i,
-              ""
-            )
-            .replace(
-              /^(it['’]s (a )?reasonable question|your concern is valid|that’s a real concern|that’s valid)\b[.!?。！？]?\s*/i,
-              ""
-            )
-            .trim();
-
-          reply = `${es} ${raw}`.trim();
-        }
-      }
-
-      if (session.memory) delete session.memory._type3ESPrefix;
-    }
-
-    // ✅ Inject ES prefix for Type4 slots 3/4/5 (GUARDED)
-    if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
-      let raw = String(reply || "").trim();
+    if (isFixed2x) {
+      reply = raw; // 不注入
+    } else {
+      const es =
+        (session.memory && session.memory._type3ESPrefix) || ES_SENTENCES.understand;
 
       raw = raw
         .replace(
-          /^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you|i get it)\b[.!?。！？]?\s*/i,
+          /^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you|i get it|i can see why)\b[.!?。！？]?\s*/i,
           ""
         )
         .replace(
-          /^(it['’]s (a )?reasonable question|your concern is valid|that’s a real concern)\b[.!?。！？]?\s*/i,
+          /^(it['’]s (a )?reasonable question|your concern is valid|that’s a real concern|that’s valid)\b[.!?。！？]?\s*/i,
           ""
         )
         .trim();
 
-      // --- ending bypass: if model output is the exact ending, DO NOT inject ---
-      const isType4Ending =
-        /^\s*I['’]m glad to hear that\.\s*You['’]ve done a good job thinking about your situation so far\.\s*I wish you all the best\.\s*\(This is the end of our conversation\.\)\s*$/i.test(
-          raw
-        );
-
-      if (isType4Ending) {
-        reply = raw;
-      } else {
-        const es =
-          (session.memory && session.memory._type4ESPrefix) || ES_SENTENCES.understand;
-        reply = `${es} ${raw}`.trim();
-      }
-
-      if (session.memory) delete session.memory._type4ESPrefix;
+      reply = `${es} ${raw}`.trim();
     }
+  }
+
+  if (session.memory) delete session.memory._type3ESPrefix;
+}
+
+
+    // ✅ Inject ES prefix for Type4 slots 3/4/5 (GUARDED)
+    if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
+  let raw = String(reply || "").trim();
+
+  // ✅ 只要带结束标记，直接收敛为统一 ending，且不注入 ES prefix
+  if (hasEndMarker(raw)) {
+    reply = EXACT_END;
+  } else {
+    // 仍然保留你原本的“去掉模型自带 ES”清洗
+    raw = raw
+      .replace(
+        /^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you|i get it)\b[.!?。！？]?\s*/i,
+        ""
+      )
+      .replace(
+        /^(it['’]s (a )?reasonable question|your concern is valid|that’s a real concern)\b[.!?。！？]?\s*/i,
+        ""
+      )
+      .trim();
+
+    const es =
+      (session.memory && session.memory._type4ESPrefix) || ES_SENTENCES.understand;
+
+    reply = `${es} ${raw}`.trim();
+  }
+
+  if (session.memory) delete session.memory._type4ESPrefix;
+}
 
     // NEW: if this is Slot 1, capture the keyword/topic used in Slot 1 for Slot 2 reuse
     if (currentSlotId === 1) {
