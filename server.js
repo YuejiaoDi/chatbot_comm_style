@@ -145,6 +145,19 @@ function normalize(s) {
   return String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
+function getLastSlotId(condition) {
+  const order = condition?.slotOrder || [];
+  return order.length ? order[order.length - 1] : null;
+}
+
+function appendEndingOnce(text, ending) {
+  const t = String(text || "").trim();
+  if (!t) return ending;
+  if (t.includes("(This is the end of our conversation.)")) return t; // already has it
+  return `${t} ${ending}`.trim();
+}
+
+
 // =====================
 // Slot 2 stressor phrase helpers (general; NO reason)
 // =====================
@@ -984,19 +997,15 @@ app.post("/chat", async (req, res) => {
   updateMemoryFromUserAnswer(session, prevBotSlotId, userText);
 
   // move to next slot
-  session.slotIndex += 1;
-  const currentSlotId = condition.slotOrder[session.slotIndex];
+session.slotIndex += 1;
 
-  if (currentSlotId === undefined) {
-    session.done = true;
-    return res.json({
-      reply: "Conversation ended.",
-      done: true,
-      sessionId,
-      slotId: null,
-      conditionId: session.conditionId,
-    });
-  }
+// ✅ 如果超过最后 slot：不要 done，而是钉死在最后 slot 循环
+if (session.slotIndex >= condition.slotOrder.length) {
+  session.slotIndex = condition.slotOrder.length - 1;
+}
+
+const currentSlotId = condition.slotOrder[session.slotIndex];
+
 
   const slot = condition.slots[currentSlotId];
 
@@ -1290,68 +1299,64 @@ ${noRepeatBlock}
 
     let reply = await callOpenAI(payload);
 
+    const lastSlotId = getLastSlotId(condition);
+const DICT_END = "I wish you all the best. (This is the end of our conversation.)";
+
+// ✅ 如果当前就是最后 slot：无论用户继续问什么，最后都拼上 ending
+if (currentSlotId === lastSlotId) {
+  reply = appendEndingOnce(reply, DICT_END);
+}
+
     // ✅ Inject ES prefix for Type3 slots 5/6/7 (GUARDED)
-    if (type === "type3" && [5, 6, 7].includes(currentSlotId)) {
+if (type === "type3" && [5, 6, 7].includes(currentSlotId)) {
   let raw = String(reply || "").trim();
 
-  // ✅ 只要模型输出带任何结束标记，直接收敛成唯一 ending，并跳过注入
-  if (hasEndMarker(raw)) {
-    reply = EXACT_END;
+  const isFixed2x =
+    /^(I'm sorry to hear that\.|It’s usual to take some time to figure out what doesn’t quite fit\.)\s+/i.test(raw) &&
+    /\bwhich parts you think should be revised\?\s*$/i.test(raw);
+
+  if (isFixed2x) {
+    reply = raw; // 不注入
   } else {
-    const isFixed2x =
-      /^(I'm sorry to hear that\.|It’s usual to take some time to figure out what doesn’t quite fit\.)\s+/i.test(raw) &&
-      /\bwhich parts you think should be revised\?\s*$/i.test(raw);
+    const es =
+      (session.memory && session.memory._type3ESPrefix) || ES_SENTENCES.understand;
 
-    if (isFixed2x) {
-      reply = raw; // 不注入
-    } else {
-      const es =
-        (session.memory && session.memory._type3ESPrefix) || ES_SENTENCES.understand;
+    raw = raw
+      .replace(
+        /^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you|i get it|i can see why)\b[.!?。！？]?\s*/i,
+        ""
+      )
+      .replace(
+        /^(it['’]s (a )?reasonable question|your concern is valid|that’s a real concern|that’s valid)\b[.!?。！？]?\s*/i,
+        ""
+      )
+      .trim();
 
-      raw = raw
-        .replace(
-          /^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you|i get it|i can see why)\b[.!?。！？]?\s*/i,
-          ""
-        )
-        .replace(
-          /^(it['’]s (a )?reasonable question|your concern is valid|that’s a real concern|that’s valid)\b[.!?。！？]?\s*/i,
-          ""
-        )
-        .trim();
-
-      reply = `${es} ${raw}`.trim();
-    }
+    reply = `${es} ${raw}`.trim();
   }
 
   if (session.memory) delete session.memory._type3ESPrefix;
 }
 
-
     // ✅ Inject ES prefix for Type4 slots 3/4/5 (GUARDED)
     if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
   let raw = String(reply || "").trim();
 
-  // ✅ 只要带结束标记，直接收敛为统一 ending，且不注入 ES prefix
-  if (hasEndMarker(raw)) {
-    reply = EXACT_END;
-  } else {
-    // 仍然保留你原本的“去掉模型自带 ES”清洗
-    raw = raw
-      .replace(
-        /^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you|i get it)\b[.!?。！？]?\s*/i,
-        ""
-      )
-      .replace(
-        /^(it['’]s (a )?reasonable question|your concern is valid|that’s a real concern)\b[.!?。！？]?\s*/i,
-        ""
-      )
-      .trim();
+  raw = raw
+    .replace(
+      /^(i['’]m sorry to hear that|i understand|that makes sense|it['’]s understandable|i hear you|i get it)\b[.!?。！？]?\s*/i,
+      ""
+    )
+    .replace(
+      /^(it['’]s (a )?reasonable question|your concern is valid|that’s a real concern)\b[.!?。！？]?\s*/i,
+      ""
+    )
+    .trim();
 
-    const es =
-      (session.memory && session.memory._type4ESPrefix) || ES_SENTENCES.understand;
+  const es =
+    (session.memory && session.memory._type4ESPrefix) || ES_SENTENCES.understand;
 
-    reply = `${es} ${raw}`.trim();
-  }
+  reply = `${es} ${raw}`.trim();
 
   if (session.memory) delete session.memory._type4ESPrefix;
 }
