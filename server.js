@@ -691,7 +691,7 @@ function pushAdviceHistory(session, botText) {
 }
 
 // =====================
-// ES prefix generator (1–2 sentences): validate + care + empathy (+ light encouragement)
+// ES prefix generator (1 sentences): validate + care + empathy (+ light encouragement)
 // For Type3 & Type4 follow-ups
 // =====================
 async function generateESPrefix(userText) {
@@ -701,39 +701,39 @@ async function generateESPrefix(userText) {
     {
       role: "system",
       content:
-        "Write EXACTLY 1 or 2 short sentences.\n" +
+        "Write EXACTLY ONE short sentence in English.\n" +
+        "The sentence MUST be 15 words or fewer.\n\n" +
         "Purpose:\n" +
-        "- Validate the user's feelings or concern.\n" +
+        "- Briefly validate the user's feeling or concern.\n" +
         "- Show care and empathy.\n" +
-        "- Gentle encouragement is allowed, but keep it subtle.\n\n" +
+        "- Gentle encouragement is allowed but subtle.\n\n" +
         "Hard rules:\n" +
-        "- Output ONLY the 1–2 sentences. No lists, no extra text.\n" +
+        "- Output ONLY the sentence. No extra text.\n" +
         "- Do NOT give advice, steps, solutions, or examples.\n" +
-        "- Do NOT explain your approach (e.g., 'This helps because...').\n" +
-        "- Do NOT ask any questions.\n" +
+        "- Do NOT ask questions.\n" +
+        "- Do NOT explain your approach.\n" +
         "- Do NOT mention therapy, counseling, diagnosis, or hotlines.\n\n" +
-        "Style constraints:\n" +
-        "- Keep it natural and human, not robotic.\n" +
-        "- Vary sentence openings.\n" +
-        "- Avoid 'Many people...' or 'It’s common...' unless truly necessary.\n\n" +
-        "Language:\n" +
-        "- Match the user's language (English vs Chinese).",
+        "Style:\n" +
+        "- Natural, concise, non-verbose.",
     },
-    { role: "user", content: `User message:\n${raw}` },
+    { role: "user", content: raw },
   ];
 
-  const payload = { model: "gpt-4o-mini", messages, temperature: 0.7 };
+  const payload = { model: "gpt-4o-mini", messages, temperature: 0.6 };
   const reply = await callOpenAI(payload);
 
-  const sentences =
+  // ===== HARD SERVER ENFORCEMENT =====
+  const sentence =
     (reply || "")
       .replace(/\s+/g, " ")
       .trim()
-      .match(/[^.!?。！？]+[.!?。！？]/g) || [];
+      .match(/^[^.!?]*[.!?]/)?.[0] || "";
 
-  const out = sentences.slice(0, 2).join(" ").trim();
+  const words = sentence.split(" ").filter(Boolean).slice(0, 15).join(" ");
 
-  return out || "I hear you, and your concern here is completely understandable.";
+  return words
+    ? (/[.!?]$/.test(words) ? words : words + ".")
+    : "I understand how frustrating this feels.";
 }
 
 // =====================
