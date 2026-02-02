@@ -519,6 +519,19 @@ function hasEndMarker(text) {
   );
 }
 
+function isEndingReply(text) {
+  const t = String(text || "");
+
+  // 统一 ending marker（你系统里所有正式结束）
+  if (hasEndMarker(t)) return true;
+
+  // 兜底：有些 ending 句式可能没括号
+  if (/i wish you all the best/i.test(t)) return true;
+  if (/you have reached the end of the conversation/i.test(t)) return true;
+
+  return false;
+}
+
 // =====================
 // 3) End-state detection (HARD STOP)
 // =====================
@@ -1362,19 +1375,28 @@ if (currentSlotId === lastSlotId) {
   reply = enforceNoQuestionAndEnd(reply, DICT_END);
 }
 
-  // ✅ Inject ES prefix (server-side) for Type3 follow-up slots 5/6/7
-if (type === "type3" && [5, 6, 7].includes(currentSlotId)) {
+  // Type3：只在「非 ending 回复」时注入 ES
+if (
+  type === "type3" &&
+  [5, 6, 7].includes(currentSlotId) &&
+  !isEndingReply(reply)
+) {
   const es = await generateESPrefix(userText, session);
   const raw = stripLeadingEmotionalSupport(reply);
   reply = `${es} ${raw}`.trim();
 }
 
-// ✅ Inject ES prefix (server-side) for Type4 follow-up slots 3/4/5
-if (type === "type4" && [3, 4, 5].includes(currentSlotId)) {
+// Type4：同理 只在「非 ending 回复」时注入 ES
+if (
+  type === "type4" &&
+  [3, 4, 5].includes(currentSlotId) &&
+  !isEndingReply(reply)
+) {
   const es = await generateESPrefix(userText, session);
   const raw = stripLeadingEmotionalSupport(reply);
   reply = `${es} ${raw}`.trim();
 }
+
 
     // NEW: if this is Slot 1, capture the keyword/topic used in Slot 1 for Slot 2 reuse
     if (currentSlotId === 1) {
